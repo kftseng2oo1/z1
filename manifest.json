@@ -1,0 +1,34 @@
+{
+  "name": "紫微斗數排盤系統",
+  "short_name": "紫微斗數",
+  "description": "紫微斗數命盤排盤與分析系統",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1008",
+  "theme_color": "#1a1008",
+  "lang": "zh-TW",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%231a1008'/%3E%3Ctext x='96' y='145' font-size='130' text-anchor='middle' font-family='serif' fill='%23c8932a'%3E%E7%B4%AB%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%231a1008'/%3E%3Ctext x='256' y='380' font-size='340' text-anchor='middle' font-family='serif' fill='%23c8932a'%3E%E7%B4%AB%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "新增排盤",
+      "short_name": "排盤",
+      "description": "快速開啟排盤功能",
+      "url": "./index.html"
+    }
+  ]
+}
