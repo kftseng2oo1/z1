@@ -1,118 +1,152 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="40%" r="65%">
-      <stop offset="0%" stop-color="#2a1a06"/>
-      <stop offset="100%" stop-color="#0d0a05"/>
-    </radialGradient>
-    <linearGradient id="goldH" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#7a5010"/>
-      <stop offset="30%" stop-color="#d4a843"/>
-      <stop offset="70%" stop-color="#c8932a"/>
-      <stop offset="100%" stop-color="#7a5010"/>
-    </linearGradient>
-    <linearGradient id="goldV" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#7a5010"/>
-      <stop offset="30%" stop-color="#d4a843"/>
-      <stop offset="70%" stop-color="#c8932a"/>
-      <stop offset="100%" stop-color="#7a5010"/>
-    </linearGradient>
-    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#3d2010"/>
-      <stop offset="100%" stop-color="#1a0e04"/>
-    </radialGradient>
-    <radialGradient id="cornerGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#1e1408"/>
-      <stop offset="100%" stop-color="#120c04"/>
-    </radialGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="8" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="glowSoft">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-  </defs>
+<svg id="icon512" class="icon-svg" width="256" height="256" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Background gradient -->
+        <radialGradient id="bg" cx="50%" cy="40%" r="65%">
+          <stop offset="0%" stop-color="#2a1a06"></stop>
+          <stop offset="100%" stop-color="#0d0a05"></stop>
+        </radialGradient>
+        <!-- Gold gradient for borders -->
+        <linearGradient id="goldH" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#7a5010"></stop>
+          <stop offset="30%" stop-color="#d4a843"></stop>
+          <stop offset="70%" stop-color="#c8932a"></stop>
+          <stop offset="100%" stop-color="#7a5010"></stop>
+        </linearGradient>
+        <linearGradient id="goldV" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#7a5010"></stop>
+          <stop offset="30%" stop-color="#d4a843"></stop>
+          <stop offset="70%" stop-color="#c8932a"></stop>
+          <stop offset="100%" stop-color="#7a5010"></stop>
+        </linearGradient>
+        <!-- Center glow -->
+        <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#3d2010" stop-opacity="1"></stop>
+          <stop offset="100%" stop-color="#1a0e04" stop-opacity="1"></stop>
+        </radialGradient>
+        <!-- Corner glow -->
+        <radialGradient id="cornerGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#1e1408" stop-opacity="1"></stop>
+          <stop offset="100%" stop-color="#120c04" stop-opacity="1"></stop>
+        </radialGradient>
+        <!-- Purple star glow filter -->
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="8" result="blur"></feGaussianBlur>
+          <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+        </filter>
+        <filter id="glowSoft">
+          <feGaussianBlur stdDeviation="3" result="blur"></feGaussianBlur>
+          <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+        </filter>
+        <!-- Clip for rounded rect -->
+        <clipPath id="roundClip">
+          <rect width="512" height="512" rx="96"></rect>
+        </clipPath>
+      </defs>
 
-  <!-- Background -->
-  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <rect width="512" height="512" rx="96" fill="none" stroke="#c8932a" stroke-width="1.5" opacity="0.15"/>
+      <!-- Rounded background -->
+      <rect width="512" height="512" rx="96" fill="url(#bg)"></rect>
 
-  <!-- Outer border -->
-  <rect x="24" y="24" width="464" height="464" rx="72" fill="none" stroke="url(#goldH)" stroke-width="2" opacity="0.6"/>
+      <!-- Subtle texture overlay -->
+      <rect width="512" height="512" rx="96" fill="none" stroke="#c8932a" stroke-width="1.5" opacity="0.15"></rect>
 
-  <!-- Grid boundary -->
-  <rect x="64" y="64" width="384" height="384" rx="8" fill="none" stroke="url(#goldH)" stroke-width="1.5" opacity="0.8"/>
+      <!-- Outer border frame -->
+      <rect x="24" y="24" width="464" height="464" rx="72" fill="none" stroke="url(#goldH)" stroke-width="2" opacity="0.6"></rect>
+      <rect x="32" y="32" width="448" height="448" rx="66" fill="none" stroke="#c8932a" stroke-width="0.8" opacity="0.3"></rect>
 
-  <!-- Cell fills -->
-  <rect x="65" y="65" width="126" height="126" rx="4" fill="url(#cornerGlow)"/>
-  <rect x="193" y="65" width="126" height="126" rx="4" fill="url(#cornerGlow)"/>
-  <rect x="321" y="65" width="126" height="126" rx="4" fill="url(#cornerGlow)"/>
-  <rect x="65" y="193" width="126" height="126" rx="4" fill="url(#cornerGlow)"/>
-  <rect x="193" y="193" width="126" height="126" rx="4" fill="url(#centerGlow)"/>
-  <rect x="321" y="193" width="126" height="126" rx="4" fill="url(#cornerGlow)"/>
-  <rect x="65" y="321" width="126" height="126" rx="4" fill="url(#cornerGlow)"/>
-  <rect x="193" y="321" width="126" height="126" rx="4" fill="url(#cornerGlow)"/>
-  <rect x="321" y="321" width="126" height="126" rx="4" fill="url(#cornerGlow)"/>
+      <!-- ===== 九宮格 grid ===== -->
+      <!-- Grid boundary -->
+      <rect x="64" y="64" width="384" height="384" rx="8" fill="none" stroke="url(#goldH)" stroke-width="1.5" opacity="0.8"></rect>
 
-  <!-- Grid lines -->
-  <line x1="192" y1="64" x2="192" y2="448" stroke="url(#goldV)" stroke-width="1.5" opacity="0.7"/>
-  <line x1="320" y1="64" x2="320" y2="448" stroke="url(#goldV)" stroke-width="1.5" opacity="0.7"/>
-  <line x1="64" y1="192" x2="448" y2="192" stroke="url(#goldH)" stroke-width="1.5" opacity="0.7"/>
-  <line x1="64" y1="320" x2="448" y2="320" stroke="url(#goldH)" stroke-width="1.5" opacity="0.7"/>
+      <!-- Grid cell size: 384/3 = 128px each, starting at 64 -->
+      <!-- Cell backgrounds -->
+      <!-- Row 1 -->
+      <rect x="65" y="65" width="126" height="126" rx="4" fill="url(#cornerGlow)"></rect>
+      <rect x="193" y="65" width="126" height="126" rx="4" fill="url(#cornerGlow)"></rect>
+      <rect x="321" y="65" width="126" height="126" rx="4" fill="url(#cornerGlow)"></rect>
+      <!-- Row 2 -->
+      <rect x="65" y="193" width="126" height="126" rx="4" fill="url(#cornerGlow)"></rect>
+      <rect x="193" y="193" width="126" height="126" rx="4" fill="url(#centerGlow)"></rect>
+      <rect x="321" y="193" width="126" height="126" rx="4" fill="url(#cornerGlow)"></rect>
+      <!-- Row 3 -->
+      <rect x="65" y="321" width="126" height="126" rx="4" fill="url(#cornerGlow)"></rect>
+      <rect x="193" y="321" width="126" height="126" rx="4" fill="url(#cornerGlow)"></rect>
+      <rect x="321" y="321" width="126" height="126" rx="4" fill="url(#cornerGlow)"></rect>
 
-  <!-- Intersection dots -->
-  <circle cx="192" cy="192" r="4" fill="#c8932a" opacity="0.8"/>
-  <circle cx="320" cy="192" r="4" fill="#c8932a" opacity="0.8"/>
-  <circle cx="192" cy="320" r="4" fill="#c8932a" opacity="0.8"/>
-  <circle cx="320" cy="320" r="4" fill="#c8932a" opacity="0.8"/>
+      <!-- Vertical grid lines -->
+      <line x1="192" y1="64" x2="192" y2="448" stroke="url(#goldV)" stroke-width="1.5" opacity="0.7"></line>
+      <line x1="320" y1="64" x2="320" y2="448" stroke="url(#goldV)" stroke-width="1.5" opacity="0.7"></line>
+      <!-- Horizontal grid lines -->
+      <line x1="64" y1="192" x2="448" y2="192" stroke="url(#goldH)" stroke-width="1.5" opacity="0.7"></line>
+      <line x1="64" y1="320" x2="448" y2="320" stroke="url(#goldH)" stroke-width="1.5" opacity="0.7"></line>
 
-  <!-- TOP-LEFT: 天機 -->
-  <text x="128" y="122" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="42" fill="#c8932a" opacity="0.92" filter="url(#glowSoft)">天</text>
-  <text x="128" y="155" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="18" fill="#8a6530" opacity="0.85">機</text>
+      <!-- Inner decorative lines (double border on grid) -->
+      <line x1="194" y1="64" x2="194" y2="448" stroke="#c8932a" stroke-width="0.5" opacity="0.25"></line>
+      <line x1="318" y1="64" x2="318" y2="448" stroke="#c8932a" stroke-width="0.5" opacity="0.25"></line>
+      <line x1="64" y1="194" x2="448" y2="194" stroke="#c8932a" stroke-width="0.5" opacity="0.25"></line>
+      <line x1="64" y1="318" x2="448" y2="318" stroke="#c8932a" stroke-width="0.5" opacity="0.25"></line>
 
-  <!-- TOP-CENTER: 太陽 -->
-  <text x="256" y="112" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="38" fill="#d4a020" opacity="0.95" filter="url(#glowSoft)">太</text>
-  <text x="256" y="148" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="38" fill="#d4a020" opacity="0.95">陽</text>
+      <!-- ===== Corner stars / symbols ===== -->
+      <!-- Top-left: 天 (Heaven) -->
+      <text x="128" y="118" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="38" fill="#c8932a" opacity="0.9" filter="url(#glowSoft)">天</text>
+      <text x="128" y="152" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="16" fill="#7a5c2a" opacity="0.8" letter-spacing="1">機</text>
 
-  <!-- TOP-RIGHT: 武曲 -->
-  <text x="384" y="122" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="42" fill="#c8932a" opacity="0.92" filter="url(#glowSoft)">武</text>
-  <text x="384" y="155" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="18" fill="#8a6530" opacity="0.85">曲</text>
+      <!-- Top-center: 太陽 -->
+      <text x="256" y="110" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="36" fill="#d4a020" opacity="0.9" filter="url(#glowSoft)">太</text>
+      <text x="256" y="145" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="36" fill="#d4a020" opacity="0.9">陽</text>
+      <text x="256" y="168" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="13" fill="#7a6030" opacity="0.7" letter-spacing="1">☀</text>
 
-  <!-- MID-LEFT: 天同 -->
-  <text x="128" y="250" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="42" fill="#c8932a" opacity="0.92" filter="url(#glowSoft)">天</text>
-  <text x="128" y="283" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="18" fill="#8a6530" opacity="0.85">同</text>
+      <!-- Top-right: 武曲 -->
+      <text x="384" y="118" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="38" fill="#c8932a" opacity="0.9" filter="url(#glowSoft)">武</text>
+      <text x="384" y="152" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="16" fill="#7a5c2a" opacity="0.8" letter-spacing="1">曲</text>
 
-  <!-- CENTER: 紫微 (main star) -->
-  <circle cx="256" cy="248" r="56" fill="#6b0f1a" opacity="0.18"/>
-  <circle cx="256" cy="248" r="40" fill="#8b1a1a" opacity="0.1"/>
-  <text x="256" y="262" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="74" font-weight="900" fill="#e0192e" filter="url(#glow)" opacity="0.97">紫</text>
-  <text x="256" y="306" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="30" font-weight="700" fill="#c8932a" opacity="0.9">微</text>
-  <!-- center cell corner dots -->
-  <circle cx="197" cy="197" r="2.5" fill="#c8932a" opacity="0.5"/>
-  <circle cx="315" cy="197" r="2.5" fill="#c8932a" opacity="0.5"/>
-  <circle cx="197" cy="315" r="2.5" fill="#c8932a" opacity="0.5"/>
-  <circle cx="315" cy="315" r="2.5" fill="#c8932a" opacity="0.5"/>
+      <!-- Mid-left: 天同 -->
+      <text x="128" y="246" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="38" fill="#c8932a" opacity="0.9" filter="url(#glowSoft)">天</text>
+      <text x="128" y="280" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="16" fill="#7a5c2a" opacity="0.8" letter-spacing="1">同</text>
 
-  <!-- MID-RIGHT: 廉貞 -->
-  <text x="384" y="250" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="42" fill="#c8932a" opacity="0.92" filter="url(#glowSoft)">廉</text>
-  <text x="384" y="283" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="18" fill="#8a6530" opacity="0.85">貞</text>
+      <!-- ===== CENTER CELL: 紫微 ===== -->
+      <!-- Center glow halo -->
+      <circle cx="256" cy="256" r="52" fill="#8b1a1a" opacity="0.12"></circle>
+      <circle cx="256" cy="256" r="44" fill="#6b1212" opacity="0.15"></circle>
+      <!-- Main 紫 character -->
+      <text x="256" y="248" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="68" font-weight="900" fill="#d4193c" filter="url(#glow)" opacity="0.95">紫</text>
+      <!-- 微 below -->
+      <text x="256" y="298" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="28" font-weight="700" fill="#c8932a" opacity="0.9">微</text>
+      <!-- Decorative dots at center corners -->
+      <circle cx="197" cy="197" r="3" fill="#c8932a" opacity="0.5"></circle>
+      <circle cx="315" cy="197" r="3" fill="#c8932a" opacity="0.5"></circle>
+      <circle cx="197" cy="315" r="3" fill="#c8932a" opacity="0.5"></circle>
+      <circle cx="315" cy="315" r="3" fill="#c8932a" opacity="0.5"></circle>
 
-  <!-- BOTTOM-LEFT: 天府 -->
-  <text x="128" y="378" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="42" fill="#c8932a" opacity="0.92" filter="url(#glowSoft)">天</text>
-  <text x="128" y="411" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="18" fill="#8a6530" opacity="0.85">府</text>
+      <!-- Mid-right: 廉貞 -->
+      <text x="384" y="246" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="38" fill="#c8932a" opacity="0.9" filter="url(#glowSoft)">廉</text>
+      <text x="384" y="280" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="16" fill="#7a5c2a" opacity="0.8" letter-spacing="1">貞</text>
 
-  <!-- BOTTOM-CENTER: 太陰 -->
-  <text x="256" y="370" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="38" fill="#8ab4d4" opacity="0.9" filter="url(#glowSoft)">太</text>
-  <text x="256" y="406" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="38" fill="#8ab4d4" opacity="0.9">陰</text>
+      <!-- Bottom-left: 天府 -->
+      <text x="128" y="374" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="38" fill="#c8932a" opacity="0.9" filter="url(#glowSoft)">天</text>
+      <text x="128" y="408" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="16" fill="#7a5c2a" opacity="0.8" letter-spacing="1">府</text>
 
-  <!-- BOTTOM-RIGHT: 貪狼 -->
-  <text x="384" y="378" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="42" fill="#c8932a" opacity="0.92" filter="url(#glowSoft)">貪</text>
-  <text x="384" y="411" text-anchor="middle" font-family="'Noto Serif TC','STSong','SimSun',serif" font-size="18" fill="#8a6530" opacity="0.85">狼</text>
+      <!-- Bottom-center: 太陰 -->
+      <text x="256" y="366" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="36" fill="#8ab4d4" opacity="0.85" filter="url(#glowSoft)">太</text>
+      <text x="256" y="401" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="36" fill="#8ab4d4" opacity="0.85">陰</text>
+      <text x="256" y="424" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="13" fill="#5a7a9a" opacity="0.7" letter-spacing="1">☾</text>
 
-  <!-- Corner brackets -->
-  <path d="M 44 44 L 44 72 M 44 44 L 72 44" stroke="#c8932a" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.65"/>
-  <path d="M 468 44 L 468 72 M 468 44 L 440 44" stroke="#c8932a" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.65"/>
-  <path d="M 44 468 L 44 440 M 44 468 L 72 468" stroke="#c8932a" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.65"/>
-  <path d="M 468 468 L 468 440 M 468 468 L 440 468" stroke="#c8932a" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.65"/>
-</svg>
+      <!-- Bottom-right: 貪狼 -->
+      <text x="384" y="374" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="38" fill="#c8932a" opacity="0.9" filter="url(#glowSoft)">貪</text>
+      <text x="384" y="408" text-anchor="middle" font-family="'Noto Serif TC',serif" font-size="16" fill="#7a5c2a" opacity="0.8" letter-spacing="1">狼</text>
+
+      <!-- Corner ornaments (四角) -->
+      <!-- Top-left corner bracket -->
+      <path d="M 44 44 L 44 68 M 44 44 L 68 44" stroke="#c8932a" stroke-width="2.5" fill="none" opacity="0.6"></path>
+      <!-- Top-right corner bracket -->
+      <path d="M 468 44 L 468 68 M 468 44 L 444 44" stroke="#c8932a" stroke-width="2.5" fill="none" opacity="0.6"></path>
+      <!-- Bottom-left corner bracket -->
+      <path d="M 44 468 L 44 444 M 44 468 L 68 468" stroke="#c8932a" stroke-width="2.5" fill="none" opacity="0.6"></path>
+      <!-- Bottom-right corner bracket -->
+      <path d="M 468 468 L 468 444 M 468 468 L 444 468" stroke="#c8932a" stroke-width="2.5" fill="none" opacity="0.6"></path>
+
+      <!-- Small decorative dots at intersections -->
+      <circle cx="192" cy="192" r="4" fill="#c8932a" opacity="0.7"></circle>
+      <circle cx="320" cy="192" r="4" fill="#c8932a" opacity="0.7"></circle>
+      <circle cx="192" cy="320" r="4" fill="#c8932a" opacity="0.7"></circle>
+      <circle cx="320" cy="320" r="4" fill="#c8932a" opacity="0.7"></circle>
+    </svg>
