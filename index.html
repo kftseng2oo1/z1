@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#1a1008">
     <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMWExMDA4Ii8+PHRleHQgeD0iOTAiIHk9IjEzMCIgZm9udC1zaXplPSIxMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzZXJpZiIgZmlsbD0iI2M4OTMyYSI+57SrPC90ZXh0Pjwvc3ZnPg==">
     <title>紫微斗數排盤系統</title>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="data:application/json,{%22name%22:%22%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8%E6%8E%92%E7%9B%A4%E7%B3%BB%E7%B5%B1%22,%22short_name%22:%22%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%231a1008%22,%22theme_color%22:%22%231a1008%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231a1008'/%3E%3Ctext x='256' y='330' font-size='300' text-anchor='middle' fill='%23c8932a'%3E%E7%B4%AB%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22}]}">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -51,6 +51,33 @@
 
         /* === CONTROLS === */
         .controls-wrap { max-width: 1450px; margin: 0 auto 15px; padding: 0 15px; }
+        /* 人員紀錄面板 */
+        .records-wrap { max-width:1450px; margin:0 auto 12px; padding:0 15px; }
+        .records-panel {
+            background:rgba(247,243,233,0.04); border:1px solid rgba(184,134,11,0.2);
+            border-radius:8px; padding:12px 15px;
+        }
+        .records-title { font-size:11px; color:var(--gold-light); letter-spacing:1px; margin-bottom:8px; font-weight:500; }
+        .records-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+        .record-chip {
+            display:inline-flex; align-items:center; gap:6px;
+            background:rgba(184,134,11,0.12); border:1px solid rgba(184,134,11,0.3);
+            border-radius:20px; padding:4px 12px; font-size:12px; color:#e8dcc8;
+            cursor:pointer; transition:all 0.2s;
+        }
+        .record-chip:hover { background:rgba(184,134,11,0.25); border-color:var(--gold); }
+        .record-chip .chip-del { color:rgba(214,48,49,0.7); font-size:14px; line-height:1; cursor:pointer; }
+        .record-chip .chip-del:hover { color:#d63031; }
+        .btn-save {
+            padding:6px 16px; background:rgba(39,174,96,0.2); border:1px solid rgba(39,174,96,0.4);
+            color:#55efc4; border-radius:4px; font-size:12px; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+        }
+        .btn-save:hover { background:rgba(39,174,96,0.35); }
+        .btn-reload {
+            padding:6px 16px; background:rgba(52,152,219,0.2); border:1px solid rgba(52,152,219,0.4);
+            color:#74b9ff; border-radius:4px; font-size:12px; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+        }
+        .btn-reload:hover { background:rgba(52,152,219,0.35); }
         .controls {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -288,10 +315,23 @@
             <label>飛宮觀測</label>
             <select id="flySource"><option value="">全盤總覽</option></select>
         </div>
+        <div class="ctrl-group">
+            <label>姓名／備註</label>
+            <input type="text" id="personName" placeholder="輸入姓名或備註" maxlength="20">
+        </div>
         <div class="btn-row">
             <button class="btn-run" onclick="runChart()">排盤推演</button>
+            <button class="btn-save" onclick="saveRecord()">💾 儲存此人</button>
             <div class="birth-info" id="birthInfo">請輸入國曆出生日期後按「排盤推演」</div>
         </div>
+    </div>
+</div>
+
+<!-- 人員紀錄列 -->
+<div class="records-wrap">
+    <div class="records-panel" id="recordsPanel" style="display:none;">
+        <div class="records-title">📋 已儲存人員（點擊姓名重新排盤）</div>
+        <div class="records-list" id="recordsList"></div>
     </div>
 </div>
 
@@ -3287,6 +3327,74 @@ function detectSelfTrans(palace) {
 //  RENDERING
 // ================================================================
 let chartData = null;
+
+// ── 人員紀錄管理 ──
+const RECORD_KEY = 'ziwei_records_v1';
+
+function loadRecords() {
+    try { return JSON.parse(localStorage.getItem(RECORD_KEY) || '[]'); } catch(e) { return []; }
+}
+function saveRecords(arr) {
+    localStorage.setItem(RECORD_KEY, JSON.stringify(arr));
+}
+
+function saveRecord() {
+    const name = document.getElementById('personName').value.trim() || '未命名';
+    const rec = {
+        name,
+        solarYear:  document.getElementById('solarYear').value,
+        solarMonth: document.getElementById('solarMonth').value,
+        solarDay:   document.getElementById('solarDay').value,
+        birthHour:  document.getElementById('birthHour').value,
+        gender:     document.getElementById('gender').value,
+        flowYear:   document.getElementById('flowYear').value,
+        savedAt:    new Date().toLocaleDateString('zh-TW'),
+    };
+    const arr = loadRecords();
+    // 同名覆蓋
+    const idx = arr.findIndex(r => r.name === name);
+    if (idx >= 0) arr[idx] = rec; else arr.unshift(rec);
+    saveRecords(arr);
+    renderRecords();
+    document.getElementById('birthInfo').textContent = `✅ 已儲存「${name}」`;
+}
+
+function loadRecord(name) {
+    const rec = loadRecords().find(r => r.name === name);
+    if (!rec) return;
+    document.getElementById('solarYear').value  = rec.solarYear;
+    document.getElementById('solarMonth').value = rec.solarMonth;
+    document.getElementById('solarDay').value   = rec.solarDay;
+    document.getElementById('birthHour').value  = rec.birthHour;
+    document.getElementById('gender').value     = rec.gender;
+    document.getElementById('flowYear').value   = rec.flowYear;
+    document.getElementById('personName').value = rec.name;
+    runChart();
+}
+
+function deleteRecord(name, e) {
+    e.stopPropagation();
+    const arr = loadRecords().filter(r => r.name !== name);
+    saveRecords(arr);
+    renderRecords();
+}
+
+function renderRecords() {
+    const arr = loadRecords();
+    const panel = document.getElementById('recordsPanel');
+    const list  = document.getElementById('recordsList');
+    if (!arr.length) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    list.innerHTML = arr.map(r => `
+        <div class="record-chip" onclick="loadRecord('${r.name.replace(/'/g,"\\'")}')">
+            <span>👤 ${r.name}</span>
+            <span style="opacity:.5;font-size:11px;">${r.savedAt}</span>
+            <span class="chip-del" onclick="deleteRecord('${r.name.replace(/'/g,"\\'")}', event)" title="刪除">✕</span>
+        </div>`).join('');
+}
+
+// 頁面載入時渲染紀錄
+window.addEventListener('DOMContentLoaded', renderRecords);
 let selectedFly = '';
 let currentDaxian = null; // { palaceName, gan, startAge, endAge }
 let flowYearGan = '丙';
