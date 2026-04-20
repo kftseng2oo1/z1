@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="紫微斗數">
-    <meta name="theme-color" content="#1a1008">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMWExMDA4Ii8+PHRleHQgeD0iOTAiIHk9IjEzMCIgZm9udC1zaXplPSIxMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzZXJpZiIgZmlsbD0iI2M4OTMyYSI+57SrPC90ZXh0Pjwvc3ZnPg==">
+    
+    
+    
+    
+    
+    
     <title>紫微斗數排盤系統</title>
-    <link rel="manifest" href="data:application/json,{%22name%22:%22%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8%E6%8E%92%E7%9B%A4%E7%B3%BB%E7%B5%B1%22,%22short_name%22:%22%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%231a1008%22,%22theme_color%22:%22%231a1008%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231a1008'/%3E%3Ctext x='256' y='330' font-size='300' text-anchor='middle' fill='%23c8932a'%3E%E7%B4%AB%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22}]}">
+    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -78,6 +78,29 @@
             color:#74b9ff; border-radius:4px; font-size:12px; cursor:pointer; transition:all 0.2s; white-space:nowrap;
         }
         .btn-reload:hover { background:rgba(52,152,219,0.35); }
+        /* AI 對話介面 */
+        .ai-quick-btn {
+            padding:5px 12px;background:rgba(155,89,182,0.15);border:1px solid rgba(155,89,182,0.35);
+            color:#c39bd3;border-radius:16px;font-size:.8em;cursor:pointer;transition:all 0.2s;
+            font-family:'Noto Serif TC',serif;
+        }
+        .ai-quick-btn:hover { background:rgba(155,89,182,0.35);color:#e8daef; }
+        .ai-bubble-user {
+            align-self:flex-end;background:rgba(108,52,131,0.3);border:1px solid rgba(155,89,182,0.4);
+            border-radius:12px 12px 2px 12px;padding:10px 14px;max-width:85%;
+            color:#e8daef;font-size:.88em;line-height:1.6;
+        }
+        .ai-bubble-ai {
+            align-self:flex-start;background:rgba(26,0,80,0.5);border:1px solid rgba(155,89,182,0.2);
+            border-radius:2px 12px 12px 12px;padding:12px 16px;max-width:95%;
+            color:#e8dcc8;font-size:.9em;line-height:1.9;white-space:pre-wrap;
+            font-family:'Noto Serif TC',serif;
+        }
+        .ai-bubble-loading {
+            align-self:flex-start;color:rgba(195,155,211,0.7);font-size:.88em;
+            padding:8px 0;animation:ai-pulse 1.2s infinite;
+        }
+        @keyframes ai-pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
         .controls {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -261,6 +284,18 @@
             .controls { grid-template-columns:1fr 1fr; }
         }
     </style>
+
+<!-- PWA Meta — auto-injected by PWA 打包神器 -->
+<meta name="application-name" content="紫微斗數AI大師">
+<meta name="description" content="">
+<meta name="theme-color" content="#1a73e8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="紫微斗數AI大師">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<script>if('serviceWorker'in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').then(function(r){console.log('[SW] registered:',r.scope)}).catch(function(e){console.warn('[SW] failed:',e)});});}</script>
 </head>
 <body>
 <div class="header">
@@ -342,7 +377,7 @@
 <div class="report-wrap">
     <div class="report" id="reportArea" style="display:none;">
         <h3>【三層飛宮分析報告：體（生年）・用（大限）・出（流年）】</h3>
-        <div style="margin-bottom:12px;">
+        <div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
             <button onclick="toggleExpertReport()" id="btnExpert"
                 style="background:linear-gradient(135deg,#5a3000,#b8860b);border:none;color:#fff8e7;
                        font-family:'Noto Serif TC',serif;font-size:0.9em;letter-spacing:0.15em;
@@ -351,11 +386,118 @@
                 onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1">
                 ⚖ 大師級飛星深度理則分析
             </button>
+            <button onclick="runAIMaster()" id="btnAI"
+                style="background:linear-gradient(135deg,#1a0050,#6c3483);border:1px solid rgba(155,89,182,0.5);
+                       color:#e8daef;font-family:'Noto Serif TC',serif;font-size:0.9em;letter-spacing:0.15em;
+                       padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:700;
+                       box-shadow:0 2px 12px rgba(108,52,131,0.4);transition:opacity 0.2s;"
+                onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1">
+                🤖 AI 紫微大師深度論命
+            </button>
         </div>
         <div class="summary-box" id="quickSummary" style="display:none;"></div>
         <div class="report-grid" id="reportGrid"></div>
+        <!-- AI 大師分析輸出區 -->
+        <div id="aiMasterWrap" style="display:none;margin-top:24px;">
+            <div style="border:1px solid rgba(155,89,182,0.4);border-radius:10px;
+                        background:rgba(26,0,80,0.3);backdrop-filter:blur(8px);padding:20px 24px;">
+                <!-- 標題列 -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;
+                            border-bottom:1px solid rgba(155,89,182,0.3);padding-bottom:12px;">
+                    <span style="font-size:1.4em;">🤖</span>
+                    <div>
+                        <div style="color:#c39bd3;font-size:.8em;letter-spacing:2px;">AI 紫微斗數大師</div>
+                        <div style="color:#e8daef;font-size:1em;font-weight:700;letter-spacing:1px;">深度論命・對話諮詢</div>
+                    </div>
+                    <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                        <button onclick="exportAIText()"
+                            style="background:rgba(39,174,96,0.2);border:1px solid rgba(39,174,96,0.4);
+                                   color:#55efc4;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;">
+                            💾 存檔
+                        </button>
+                        <button onclick="exportAIPDF()"
+                            style="background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);
+                                   color:#ff7675;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;">
+                            📄 PDF
+                        </button>
+                        <button onclick="shareAIReport()"
+                            style="background:rgba(52,152,219,0.2);border:1px solid rgba(52,152,219,0.4);
+                                   color:#74b9ff;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;">
+                            🔗 分享
+                        </button>
+                        <button onclick="clearAIChat()"
+                            style="background:rgba(155,89,182,0.2);border:1px solid rgba(155,89,182,0.4);
+                                   color:#c39bd3;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;">
+                            🗑 清除
+                        </button>
+                        <button onclick="document.getElementById('aiMasterWrap').style.display='none'"
+                            style="background:none;border:none;color:rgba(200,200,200,0.5);
+                                   font-size:18px;cursor:pointer;">✕</button>
+                    </div>
+                </div>
+                <!-- 對話記錄區 -->
+                <div id="aiChatHistory" style="max-height:520px;overflow-y:auto;margin-bottom:16px;
+                     display:flex;flex-direction:column;gap:12px;"></div>
+                <!-- 快速追問按鈕 -->
+                <div id="aiQuickBtns" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+                    <div style="width:100%;font-size:.75em;color:rgba(195,155,211,0.7);margin-bottom:2px;">💬 快速追問：</div>
+                    <button class="ai-quick-btn" onclick="aiQuickAsk('請深入分析婚姻感情，包含擇偶條件、婚姻品質與注意事項。')">💍 婚姻感情</button>
+                    <button class="ai-quick-btn" onclick="aiQuickAsk('請分析學業考試運勢，包含適合的學習方向與考試時機。')">📚 學業考試</button>
+                    <button class="ai-quick-btn" onclick="aiQuickAsk('請分析健康體質，哪些器官或系統需要特別注意，以及養生建議。')">🩺 健康體質</button>
+                    <button class="ai-quick-btn" onclick="aiQuickAsk('請分析生育子女運，幾個子女、與子女的緣分與互動關係。')">👶 生育子女</button>
+                    <button class="ai-quick-btn" onclick="aiQuickAsk('請分析財富格局，是適合創業還是受薪，最佳的理財投資方式。')">💰 財富格局</button>
+                    <button class="ai-quick-btn" onclick="aiQuickAsk('請分析事業職涯，最適合的行業、職位特質與貴人方向。')">💼 事業職涯</button>
+                    <button class="ai-quick-btn" onclick="aiQuickAsk('請分析與父母、兄弟姊妹、朋友的人際緣分與互動模式。')">👨‍👩‍👧 六親緣分</button>
+                    <button class="ai-quick-btn" onclick="aiQuickAsk('請針對目前大限與流年，給出今年最重要的三件事與行動建議。')">📅 今年重點</button>
+                </div>
+                <!-- 自訂追問輸入框 -->
+                <div id="aiInputArea" style="display:none;">
+                    <div style="display:flex;gap:8px;align-items:flex-end;">
+                        <textarea id="aiUserInput" placeholder="輸入追問問題，例如：我何時適合結婚？創業時機？"
+                            style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(155,89,182,0.4);
+                                   border-radius:6px;color:#e8dcc8;padding:10px;font-size:.88em;
+                                   font-family:'Noto Serif TC',serif;resize:vertical;min-height:60px;
+                                   outline:none;" rows="2"
+                            onkeydown="if(event.key==='Enter'&&event.ctrlKey)aiSendMessage()"></textarea>
+                        <button onclick="aiSendMessage()"
+                            style="background:linear-gradient(135deg,#6c3483,#9b59b6);border:none;
+                                   color:white;padding:10px 16px;border-radius:6px;cursor:pointer;
+                                   font-size:.88em;white-space:nowrap;font-weight:700;">
+                            傳送 ▶
+                        </button>
+                    </div>
+                    <div style="font-size:.75em;color:rgba(195,155,211,0.5);margin-top:4px;">
+                        Ctrl+Enter 快速傳送
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- ▼ 大師級飛星深度理則分析插件輸出區 ▼ -->
         <div id="expertAnalysisWrap" style="margin-top:28px;display:none;">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+                        margin-bottom:14px;padding-bottom:12px;
+                        border-bottom:1px solid rgba(184,134,11,0.3);">
+                <span style="color:var(--gold-light);font-weight:700;font-size:.95em;letter-spacing:1px;">
+                    ⚖ 大師級飛星深度理則分析
+                </span>
+                <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+                    <button onclick="exportExpertText()"
+                        style="background:rgba(39,174,96,0.2);border:1px solid rgba(39,174,96,0.4);
+                               color:#55efc4;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;">
+                        💾 存檔
+                    </button>
+                    <button onclick="exportExpertPDF()"
+                        style="background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);
+                               color:#ff7675;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;">
+                        📄 PDF
+                    </button>
+                    <button onclick="shareExpertReport()"
+                        style="background:rgba(52,152,219,0.2);border:1px solid rgba(52,152,219,0.4);
+                               color:#74b9ff;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;">
+                        🔗 分享
+                    </button>
+                </div>
+            </div>
             <div id="expertAnalysis"></div>
         </div>
     </div>
@@ -5605,6 +5747,481 @@ function generateExpertReport(palaces, birthGan, daLimitGan, flowYearGan2) {
 
     html += `<div style="text-align:right;font-size:.75em;opacity:.4;margin-top:4px;">Ziwei Expert Plugin v1.0 · 曾大師理則</div></div>`;
     return html;
+}
+
+// ── AI 紫微大師深度論命 ──
+// ▼ 填入你的 Cloudflare Worker URL（部署後修改此行）
+const ZIWEI_WORKER_URL = 'https://arcar.kftseng2oo1.workers.dev';
+
+// ── AI 對話狀態 ──
+let aiChatMessages = [];   // 完整對話歷史（送給 API）
+let aiSystemPrompt = '';   // 命盤 system context
+
+// 建立命盤 context（排盤後呼叫一次）
+function buildAIContext() {
+    if (!chartData) return '';
+    const palaces = chartData.palaces;
+    const bGan = chartData.yearGan;
+    const bZhi = chartData.yearZhi;
+    const mingPalace = palaces.find(p => p.isMing);
+    const SH = {'甲':{祿:'廉貞',權:'破軍',科:'武曲',忌:'太陽'},'乙':{祿:'天機',權:'天梁',科:'紫微',忌:'太陰'},
+        '丙':{祿:'天同',權:'天機',科:'文昌',忌:'廉貞'},'丁':{祿:'太陰',權:'天同',科:'天機',忌:'巨門'},
+        '戊':{祿:'貪狼',權:'太陰',科:'右弼',忌:'天機'},'己':{祿:'武曲',權:'貪狼',科:'天梁',忌:'文曲'},
+        '庚':{祿:'太陽',權:'武曲',科:'太陰',忌:'天同'},'辛':{祿:'巨門',權:'太陽',科:'文曲',忌:'文昌'},
+        '壬':{祿:'天梁',權:'紫微',科:'左輔',忌:'武曲'},'癸':{祿:'破軍',權:'巨門',科:'太陰',忌:'貪狼'}};
+    const bSh = SH[bGan]||{};
+    const palaceInfo = palaces.map(p => {
+        const stars = [...(p.stars?.m||[]),...(p.stars?.a||[])].join('、')||'（無主星）';
+        return `【${p.name}】${p.gan}干・${stars}`;
+    }).join('\n');
+    const fy = parseInt(document.getElementById('flowYear')?.value||new Date().getFullYear());
+    const fyGan = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'][(fy-4)%10];
+    const fyZhi = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][(fy-4)%12];
+    const fySh = SH[fyGan]||{};
+    let dxInfo = '（未設定大限）';
+    if (typeof currentDaxian!=='undefined' && currentDaxian) {
+        const dxSh = SH[currentDaxian.gan]||{};
+        dxInfo = `大限宮：${currentDaxian.palaceName}（${currentDaxian.gan}干・${currentDaxian.startAge}-${currentDaxian.endAge}歲）\n大限四化：祿=${dxSh.祿||'?'} 權=${dxSh.權||'?'} 科=${dxSh.科||'?'} 忌=${dxSh.忌||'?'}`;
+    }
+    const personName = document.getElementById('personName')?.value?.trim()||'命主';
+    const gender = document.getElementById('gender')?.value==='M'?'男命':'女命';
+    const mingStars = [...(mingPalace?.stars?.m||[])].join('、')||'（空宮）';
+    return `你是精通曾氏紫微斗數飛星四化理則的命理大師，擅長三層體用出（生年・大限・流年）深度分析。
+以下是命主的完整命盤，請在整個對話過程中始終根據此命盤回答所有問題：
+
+命主：${personName}（${gender}）
+生年干支：${bGan}${bZhi}年
+生年四化：祿=${bSh.祿||'?'} 權=${bSh.權||'?'} 科=${bSh.科||'?'} 忌=${bSh.忌||'?'}
+命宮：${mingPalace?.name||'?'}（${mingPalace?.gan||'?'}干）・主星：${mingStars}
+
+十二宮星曜：
+${palaceInfo}
+
+${dxInfo}
+
+流年：${fy}年（${fyGan}${fyZhi}年）
+流年四化：祿=${fySh.祿||'?'} 權=${fySh.權||'?'} 科=${fySh.科||'?'} 忌=${fySh.忌||'?'}
+
+請以古典命理大師口吻回答，繁體中文，論斷精準直接，每次回答控制在300字以內。`;
+}
+
+// 呼叫 API（共用，支援對話歷史）
+async function callAI(userMsg) {
+    aiChatMessages.push({ role:'user', content: userMsg });
+    const isArtifacts = location.hostname.includes('claude.ai') || location.hostname==='localhost';
+    const apiUrl = isArtifacts ? 'https://api.anthropic.com/v1/messages' : ZIWEI_WORKER_URL;
+    const body = {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: aiSystemPrompt,
+        messages: aiChatMessages,
+    };
+    const resp = await fetch(apiUrl, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    });
+    const data = await resp.json();
+    const reply = data?.content?.[0]?.text || '⚠ 回應異常，請重試。';
+    aiChatMessages.push({ role:'assistant', content: reply });
+    return reply;
+}
+
+// 加入對話泡泡
+function addBubble(role, text) {
+    const history = document.getElementById('aiChatHistory');
+    const div = document.createElement('div');
+    div.className = role==='user' ? 'ai-bubble-user' : 'ai-bubble-ai';
+    div.textContent = role==='user' ? '你：' + text : '🤖 ' + text;
+    history.appendChild(div);
+    history.scrollTop = history.scrollHeight;
+    return div;
+}
+
+function addLoading() {
+    const history = document.getElementById('aiChatHistory');
+    const div = document.createElement('div');
+    div.className = 'ai-bubble-loading';
+    div.textContent = '🤖 大師正在推算中…';
+    history.appendChild(div);
+    history.scrollTop = history.scrollHeight;
+    return div;
+}
+
+// 主入口：初次呼叫（完整論命）
+async function runAIMaster() {
+    if (!chartData) { alert('請先排盤後再呼叫 AI 大師分析。'); return; }
+    const btn = document.getElementById('btnAI');
+    const wrap = document.getElementById('aiMasterWrap');
+    btn.disabled = true;
+    btn.textContent = '⏳ 連線中…';
+    wrap.style.display = 'block';
+    wrap.scrollIntoView({ behavior:'smooth', block:'start' });
+
+    // 初始化對話
+    aiSystemPrompt = buildAIContext();
+    aiChatMessages = [];
+    document.getElementById('aiChatHistory').innerHTML = '';
+
+    const firstQ = '請為我進行完整的紫微斗數論命，依序分析：命格總論、財運格局、事業職涯、感情婚姻、本大限重點、流年提示，最後給出3條具體行動建議。';
+    const loading = addLoading();
+    try {
+        const reply = await callAI(firstQ);
+        loading.remove();
+        addBubble('ai', reply);
+        // 顯示追問區
+        document.getElementById('aiQuickBtns').style.display = 'flex';
+        document.getElementById('aiInputArea').style.display = 'block';
+    } catch(e) {
+        loading.remove();
+        addBubble('ai', `⚠ 連線失敗：${e.message}\n請確認 Worker 已部署且 API Key 已設定。`);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🤖 AI 紫微大師深度論命';
+    }
+}
+
+// 快速追問
+async function aiQuickAsk(question) {
+    await aiSendMessage(question);
+}
+
+// 發送追問
+async function aiSendMessage(overrideText) {
+    const input = document.getElementById('aiUserInput');
+    const msg = overrideText || input?.value?.trim();
+    if (!msg) return;
+    if (input) input.value = '';
+    if (!aiSystemPrompt) aiSystemPrompt = buildAIContext();
+
+    addBubble('user', msg);
+    const loading = addLoading();
+    try {
+        const reply = await callAI(msg);
+        loading.remove();
+        addBubble('ai', reply);
+    } catch(e) {
+        loading.remove();
+        addBubble('ai', `⚠ 錯誤：${e.message}`);
+    }
+}
+
+// 清除對話
+function clearAIChat() {
+    aiChatMessages = [];
+    document.getElementById('aiChatHistory').innerHTML = '';
+    document.getElementById('aiQuickBtns').style.display = 'none';
+    document.getElementById('aiInputArea').style.display = 'none';
+}
+
+// 取得純文字報告
+function getAIReportText() {
+    const personName = document.getElementById('personName')?.value?.trim() || '命主';
+    const bGan = chartData?.yearGan || '';
+    const bZhi = chartData?.yearZhi || '';
+    const fy = document.getElementById('flowYear')?.value || '';
+    const now = new Date().toLocaleDateString('zh-TW');
+    let txt = `╔══════════════════════════════════╗\n`;
+    txt += `║   AI 紫微斗數大師・論命報告       ║\n`;
+    txt += `╚══════════════════════════════════╝\n`;
+    txt += `命主：${personName}　生年：${bGan}${bZhi}年　流年：${fy}年\n`;
+    txt += `產出日期：${now}\n`;
+    txt += `${'─'.repeat(40)}\n\n`;
+    // 從對話歷史整理
+    aiChatMessages.forEach(m => {
+        if (m.role === 'user') {
+            txt += `【提問】${m.content}\n\n`;
+        } else {
+            txt += `【大師論斷】\n${m.content}\n\n${'─'.repeat(40)}\n\n`;
+        }
+    });
+    txt += `\n＊ 本報告由 AI 紫微斗數大師依曾氏飛星四化理則自動生成 ＊`;
+    return txt;
+}
+
+// 💾 存檔 TXT
+function exportAIText() {
+    if (!aiChatMessages.length) { alert('尚無對話內容，請先進行論命。'); return; }
+    const personName = document.getElementById('personName')?.value?.trim() || '命主';
+    const txt = getAIReportText();
+    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `紫微論命_${personName}_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// 📄 輸出 PDF（Canvas 截圖轉 PDF）
+function exportAIPDF() {
+    if (!aiChatMessages.length) { alert('尚無對話內容，請先進行論命。'); return; }
+    const personName = document.getElementById('personName')?.value?.trim() || '命主';
+    const bGan = chartData?.yearGan || '';
+    const bZhi = chartData?.yearZhi || '';
+    const fy = document.getElementById('flowYear')?.value || '';
+    const now = new Date().toLocaleDateString('zh-TW');
+
+    // 用 Canvas 繪製 PDF 內容
+    const lines = [];
+    lines.push('AI 紫微斗數大師・論命報告');
+    lines.push(`命主：${personName}　生年：${bGan}${bZhi}年　流年：${fy}年`);
+    lines.push(`產出日期：${now}`);
+    lines.push('');
+    aiChatMessages.forEach(m => {
+        if (m.role === 'user') {
+            lines.push(`▶ 提問：${m.content}`);
+            lines.push('');
+        } else {
+            lines.push('【大師論斷】');
+            m.content.split('\n').forEach(l => lines.push(l));
+            lines.push('');
+            lines.push('─'.repeat(50));
+            lines.push('');
+        }
+    });
+
+    // Canvas 多頁繪製
+    const W = 794, H = 1123; // A4 px at 96dpi
+    const MARGIN = 48, LINE_H = 22, FONT_SIZE = 13;
+    const pageLines = Math.floor((H - MARGIN * 2) / LINE_H);
+    const pages = [];
+    for (let i = 0; i < lines.length; i += pageLines) {
+        pages.push(lines.slice(i, i + pageLines));
+    }
+
+    const canvases = pages.map((pageContent, pi) => {
+        const cv = document.createElement('canvas');
+        cv.width = W; cv.height = H;
+        const ctx = cv.getContext('2d');
+        // 背景
+        ctx.fillStyle = '#1a0a00';
+        ctx.fillRect(0, 0, W, H);
+        // 標題頁裝飾
+        if (pi === 0) {
+            ctx.fillStyle = 'rgba(184,134,11,0.15)';
+            ctx.fillRect(0, 0, W, 80);
+            ctx.fillStyle = '#b8860b';
+            ctx.fillRect(0, 78, W, 2);
+        }
+        ctx.fillStyle = '#e8dcc8';
+        ctx.font = `${FONT_SIZE}px "PingFang TC", "Microsoft JhengHei", serif`;
+        pageContent.forEach((line, i) => {
+            const y = MARGIN + i * LINE_H + (pi === 0 && i === 0 ? 10 : 0);
+            if (i === 0 && pi === 0) {
+                ctx.font = `bold 18px "PingFang TC", serif`;
+                ctx.fillStyle = '#f0d090';
+                ctx.fillText(line, MARGIN, MARGIN + 30);
+                ctx.font = `${FONT_SIZE}px "PingFang TC", serif`;
+                ctx.fillStyle = '#e8dcc8';
+            } else if (line.startsWith('【')) {
+                ctx.fillStyle = '#c39bd3';
+                ctx.fillText(line, MARGIN, y);
+                ctx.fillStyle = '#e8dcc8';
+            } else if (line.startsWith('▶')) {
+                ctx.fillStyle = '#74b9ff';
+                ctx.fillText(line, MARGIN, y);
+                ctx.fillStyle = '#e8dcc8';
+            } else if (line.startsWith('─')) {
+                ctx.fillStyle = 'rgba(184,134,11,0.4)';
+                ctx.fillRect(MARGIN, y - 6, W - MARGIN * 2, 1);
+                ctx.fillStyle = '#e8dcc8';
+            } else {
+                ctx.fillText(line, MARGIN, y);
+            }
+        });
+        // 頁碼
+        ctx.fillStyle = 'rgba(200,200,200,0.3)';
+        ctx.font = `11px sans-serif`;
+        ctx.fillText(`第 ${pi+1} / ${pages.length} 頁　AI 紫微斗數大師`, MARGIN, H - 20);
+        return cv;
+    });
+
+    // 合併為單張長圖下載（簡易方案，無需 jsPDF）
+    const totalH = H * canvases.length;
+    const merged = document.createElement('canvas');
+    merged.width = W; merged.height = totalH;
+    const mCtx = merged.getContext('2d');
+    canvases.forEach((cv, i) => mCtx.drawImage(cv, 0, i * H));
+    merged.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `紫微論命_${personName}_${now.replace(/\//g,'-')}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, 'image/png');
+}
+
+// 🔗 分享（Web Share API + 備用複製）
+async function shareAIReport() {
+    if (!aiChatMessages.length) { alert('尚無對話內容，請先進行論命。'); return; }
+    const personName = document.getElementById('personName')?.value?.trim() || '命主';
+    const txt = getAIReportText();
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: `${personName} 的紫微斗數論命報告`,
+                text: txt,
+            });
+            return;
+        } catch(e) { /* 使用者取消，fallback 到複製 */ }
+    }
+    // Fallback：複製到剪貼簿
+    try {
+        await navigator.clipboard.writeText(txt);
+        alert('✅ 報告已複製到剪貼簿！\n可貼到 LINE、Email 或備忘錄分享。');
+    } catch(e) {
+        // 最後備用：textarea 選取複製
+        const ta = document.createElement('textarea');
+        ta.value = txt;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert('✅ 報告已複製到剪貼簿！');
+    }
+}
+
+// ── 飛星分析報告 匯出 ──
+function getExpertReportText() {
+    const personName = document.getElementById('personName')?.value?.trim() || '命主';
+    const bGan = chartData?.yearGan || '';
+    const bZhi = chartData?.yearZhi || '';
+    const fy = document.getElementById('flowYear')?.value || '';
+    const now = new Date().toLocaleDateString('zh-TW');
+    const area = document.getElementById('expertAnalysis');
+    if (!area || !area.innerText.trim()) return null;
+
+    let txt = `╔══════════════════════════════════╗\n`;
+    txt += `║  ⚖ 飛星深度理則分析報告           ║\n`;
+    txt += `╚══════════════════════════════════╝\n`;
+    txt += `命主：${personName}　生年：${bGan}${bZhi}年　流年：${fy}年\n`;
+    txt += `產出日期：${now}\n`;
+    txt += `${'─'.repeat(44)}\n\n`;
+    // 從 DOM 提取純文字，保留段落結構
+    area.querySelectorAll('.zep-block').forEach(block => {
+        const title = block.querySelector('.zep-block-title, h4, b');
+        if (title) txt += `\n【${title.innerText.trim()}】\n${'─'.repeat(30)}\n`;
+        const content = block.querySelector('.zep-block-content, .zep-block-body');
+        if (content) txt += content.innerText.trim() + '\n';
+        else txt += block.innerText.replace(title?.innerText||'','').trim() + '\n';
+    });
+    if (!area.querySelector('.zep-block')) txt += area.innerText.trim();
+    txt += `\n\n＊ 本報告依曾氏飛星四化理則自動生成 ＊`;
+    return txt;
+}
+
+function exportExpertText() {
+    const txt = getExpertReportText();
+    if (!txt) { alert('請先點擊「飛星深度理則分析」產生報告。'); return; }
+    const personName = document.getElementById('personName')?.value?.trim() || '命主';
+    const now = new Date().toLocaleDateString('zh-TW').replace(/\//g,'-');
+    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `飛星分析_${personName}_${now}.txt`;
+    a.click(); URL.revokeObjectURL(url);
+}
+
+function exportExpertPDF() {
+    const area = document.getElementById('expertAnalysis');
+    if (!area || !area.innerText.trim()) { alert('請先點擊「飛星深度理則分析」產生報告。'); return; }
+    const personName = document.getElementById('personName')?.value?.trim() || '命主';
+    const now = new Date().toLocaleDateString('zh-TW').replace(/\//g,'-');
+
+    // 用 html2canvas 截圖整個 expertAnalysisWrap
+    const wrap = document.getElementById('expertAnalysisWrap');
+    const origMax = area.style.maxHeight;
+    area.style.maxHeight = 'none'; // 展開全部內容
+
+    // Canvas 截圖（原生，不依賴外部庫）
+    const W = 900;
+    const lines = [];
+    const bGan = chartData?.yearGan || '';
+    const bZhi = chartData?.yearZhi || '';
+    const fy = document.getElementById('flowYear')?.value || '';
+    lines.push('⚖ 飛星深度理則分析報告');
+    lines.push(`命主：${personName}　生年：${bGan}${bZhi}年　流年：${fy}年`);
+    lines.push(`產出日期：${new Date().toLocaleDateString('zh-TW')}`);
+    lines.push('');
+
+    // 從 DOM 逐段擷取
+    area.querySelectorAll('.zep-block, .zep-fly-item, [class*="zep"]').forEach(el => {
+        const t = el.innerText.trim();
+        if (t) t.split('\n').forEach(l => l.trim() && lines.push(l.trim()));
+        lines.push('');
+    });
+    if (!area.querySelector('.zep-block')) {
+        area.innerText.trim().split('\n').forEach(l => l.trim() && lines.push(l.trim()));
+    }
+
+    const LINE_H = 22, FONT = 13, MARGIN = 48, PW = W, PH = 1123;
+    const maxLines = Math.floor((PH - MARGIN * 2) / LINE_H);
+    const pages = [];
+    for (let i = 0; i < lines.length; i += maxLines) pages.push(lines.slice(i, i + maxLines));
+    if (!pages.length) pages.push(['（無內容）']);
+
+    const canvases = pages.map((pg, pi) => {
+        const cv = document.createElement('canvas');
+        cv.width = PW; cv.height = PH;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#110820'; ctx.fillRect(0,0,PW,PH);
+        if (pi===0) { ctx.fillStyle='rgba(184,134,11,0.12)'; ctx.fillRect(0,0,PW,72); }
+        ctx.fillStyle='rgba(184,134,11,0.5)'; ctx.fillRect(0,72,PW,1);
+        ctx.font=`${FONT}px "PingFang TC","Microsoft JhengHei",serif`;
+        pg.forEach((line,i) => {
+            const y = MARGIN + i * LINE_H + (pi===0&&i===0?12:0);
+            if (i===0&&pi===0) {
+                ctx.font=`bold 17px "PingFang TC",serif`; ctx.fillStyle='#f0d090';
+                ctx.fillText(line, MARGIN, MARGIN+28);
+                ctx.font=`${FONT}px "PingFang TC",serif`; ctx.fillStyle='#e8dcc8';
+            } else if (line.startsWith('【')||line.startsWith('⚖')||line.startsWith('★')) {
+                ctx.fillStyle='#c39bd3'; ctx.fillText(line,MARGIN,y); ctx.fillStyle='#e8dcc8';
+            } else if (line.startsWith('▶')||line.startsWith('💡')||line.startsWith('🎯')) {
+                ctx.fillStyle='#74b9ff'; ctx.fillText(line,MARGIN,y); ctx.fillStyle='#e8dcc8';
+            } else if (/^[─=]{5,}/.test(line)) {
+                ctx.fillStyle='rgba(184,134,11,0.35)'; ctx.fillRect(MARGIN,y-5,PW-MARGIN*2,1);
+                ctx.fillStyle='#e8dcc8';
+            } else { ctx.fillStyle='#e8dcc8'; ctx.fillText(line,MARGIN,y); }
+        });
+        ctx.fillStyle='rgba(200,200,200,0.25)'; ctx.font='11px sans-serif';
+        ctx.fillText(`第${pi+1}/${pages.length}頁　⚖ 飛星深度理則分析`, MARGIN, PH-18);
+        return cv;
+    });
+
+    const merged = document.createElement('canvas');
+    merged.width = PW; merged.height = PH * canvases.length;
+    const mCtx = merged.getContext('2d');
+    canvases.forEach((cv,i) => mCtx.drawImage(cv,0,i*PH));
+    merged.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href=url; a.download=`飛星分析_${personName}_${now}.png`;
+        a.click(); URL.revokeObjectURL(url);
+    },'image/png');
+    area.style.maxHeight = origMax;
+}
+
+async function shareExpertReport() {
+    const txt = getExpertReportText();
+    if (!txt) { alert('請先點擊「飛星深度理則分析」產生報告。'); return; }
+    const personName = document.getElementById('personName')?.value?.trim() || '命主';
+    if (navigator.share) {
+        try {
+            await navigator.share({ title:`${personName} 的飛星深度理則分析`, text: txt });
+            return;
+        } catch(e) {}
+    }
+    try {
+        await navigator.clipboard.writeText(txt);
+        alert('✅ 飛星分析報告已複製到剪貼簿！\n可貼到 LINE、Email 或備忘錄分享。');
+    } catch(e) {
+        const ta = document.createElement('textarea');
+        ta.value = txt; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert('✅ 報告已複製到剪貼簿！');
+    }
 }
 
 function toggleExpertReport() {
