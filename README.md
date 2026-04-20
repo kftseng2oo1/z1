@@ -38,7 +38,7 @@ git push -u origin main
 | display | standalone |
 | theme_color | #1a73e8 |
 | lang | zh-TW |
-| scope | /Z1/ |
+| scope | /z1/ |
 
 ---
 *由 [PWA 打包神器](https://github.com) 自動生成*

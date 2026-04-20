@@ -4,13 +4,13 @@
 
 const CACHE_NAME = '紫微斗數ai大師-v1';
 const PRECACHE_URLS = [
-    "/Z1/index.html",
-    "/Z1/sw.js",
-    "/Z1/manifest.json",
-    "/Z1/icon.svg",
-    "/Z1/offline.html",
-    "/Z1/icon-192.png",
-    "/Z1/icon-512.png"
+    "/z1/index.html",
+    "/z1/sw.js",
+    "/z1/manifest.json",
+    "/z1/icon.svg",
+    "/z1/offline.html",
+    "/z1/icon-192.png",
+    "/z1/icon-512.png"
 ];
 
 // Install: pre-cache assets
@@ -59,7 +59,7 @@ self.addEventListener('fetch', event => {
             return response;
           }).catch(() => null);
 
-          return cached || fetchPromise || caches.match('/Z1/offline.html');
+          return cached || fetchPromise || caches.match('/z1/offline.html');
         })
       )
     );
@@ -77,7 +77,7 @@ self.addEventListener('fetch', event => {
           return response;
         }).catch(() => {
           if (event.request.destination === 'document') {
-            return caches.match('/Z1/offline.html');
+            return caches.match('/z1/offline.html');
           }
         });
       })
