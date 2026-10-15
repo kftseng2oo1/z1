@@ -6250,11 +6250,7 @@ runChart();
 //  PWA Service Worker 註冊（需要 HTTPS 才能生效）
 //  部署到 GitHub Pages / Netlify 後自動啟用離線快取
 // ================================================================
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('sw.js')
-        .then(reg => console.log('SW 已註冊，離線模式啟用', reg.scope))
-        .catch(err => console.warn('SW 註冊失敗:', err));
-}
+// （SW 已在 <head> 註冊，這裡不再重複）
 </script>
 </body>
 </html>
