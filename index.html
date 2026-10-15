@@ -512,7 +512,7 @@ const LUNAR_INFO = [
 0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
 0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
 0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
-0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+0x06566,0x0d4a0,0x0ea50,0x16a95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
 0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
 0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,
 0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
@@ -3159,23 +3159,14 @@ const ZIWEI_REMAINDER = {
 };
 
 function getZiweiDz(lunarDay, juNum) {
-    const quotient = Math.floor(lunarDay / juNum);
-    const remainder = lunarDay % juNum;
-
-    if (remainder === 0) {
-        // 整除：從寅宮起走 quotient 步（寅算第1步）
-        return (2 + quotient - 1) % 12;
-    } else {
-        if (quotient === 0) {
-            // 商=0（日數 < 局數）：直接在餘數宮安紫微
-            return ZIWEI_REMAINDER[juNum][remainder];
-        } else {
-            // 從餘數宮的前一宮起，走 quotient 步（起點算第1步）
-            const remDzIdx = ZIWEI_REMAINDER[juNum][remainder];
-            const startDzIdx = (remDzIdx + 1) % 12;
-            return (startDzIdx + quotient - 1) % 12;
-        }
-    }
+    // 借數法：找最小的 x≥0 使 (日+x) 能被局數整除，商為 q
+    // 從寅宮起數 q 步（寅=第1步）；借數 x 為奇數則逆退 x 宮，偶數則順進 x 宮
+    let x = 0;
+    while ((lunarDay + x) % juNum !== 0) x++;
+    const q = (lunarDay + x) / juNum;
+    let pos = 2 + q - 1;
+    pos += (x % 2 === 1) ? -x : x;
+    return ((pos % 12) + 12) % 12;
 }
 
 // ================================================================
@@ -3254,7 +3245,7 @@ function getKuiYue(yearGan) {
 }
 
 // 擎羊、陀羅、火星、鈴星
-function getShaStars(yearGan, hourIdx) {
+function getShaStars(yearGan, hourIdx, yearZhi) {
     // 擎羊：年干定位
     const qingyangTable = { '甲':'卯','乙':'辰','丙':'午','丁':'未','戊':'午','己':'未','庚':'酉','辛':'戌','壬':'子','癸':'丑' };
     // 陀羅：擎羊前一位
@@ -3263,13 +3254,16 @@ function getShaStars(yearGan, hourIdx) {
     const qyIdx = DZ_INDEX[qingyangTable[yearGan]];
     const tlIdx = DZ_INDEX[tuoluoTable[yearGan]];
 
-    // 火星 (依年支和時辰，簡化版：寅午戌年起丑，申子辰年起寅，巳酉丑年起卯，亥卯未年起酉)
-    // 簡化：以時辰順行
-    const huoxingBase = [2, 3, 1, 9]; // 寅午戌, 申子辰, 巳酉丑, 亥卯未
-    const huoxingIdx = (1 + hourIdx) % 12; // simplified
-
-    // 鈴星 (similar pattern, simplified)
-    const lingxingIdx = (10 + hourIdx) % 12; // simplified
+    // 火星：寅午戌年丑起、申子辰年寅起、巳酉丑年卯起、亥卯未年酉起，子時起順行至生時
+    // 鈴星：寅午戌年卯起，其餘年份戌起，子時起順行至生時
+    const zIdx = DZ_INDEX[yearZhi];
+    const group = [2, 6, 10].includes(zIdx) ? 'yinwuxu'
+                : [8, 0, 4].includes(zIdx)  ? 'shenzichen'
+                : [5, 9, 1].includes(zIdx)  ? 'siyouchou' : 'haimaowei';
+    const huoStart  = { yinwuxu: 1, shenzichen: 2, siyouchou: 3, haimaowei: 9 }[group];
+    const lingStart = group === 'yinwuxu' ? 3 : 10;
+    const huoxingIdx  = (huoStart + hourIdx) % 12;
+    const lingxingIdx = (lingStart + hourIdx) % 12;
 
     return {
         '擎羊': qyIdx,
@@ -3323,8 +3317,9 @@ function calculateChart(lunarYear, lunarMonth, lunarDay, hourIdx, gender, isLeap
     const yearGan = yearGZ.gan;
     const yearZhi = yearGZ.zhi;
 
-    // If leap month and month > 15th day, treat as next month for some schools
+    // 閏月：初一～十五算本月，十六起算下一個月（影響命宮、身宮、左輔、右弼）
     let effectiveMonth = lunarMonth;
+    if (isLeap && lunarDay > 15) effectiveMonth = lunarMonth % 12 + 1;
 
     // 1. 命宮地支
     const mingDzIdx = getMingGongDz(effectiveMonth, hourIdx);
@@ -3375,7 +3370,7 @@ function calculateChart(lunarYear, lunarMonth, lunarDay, hourIdx, gender, isLeap
     }
 
     // 8. 煞星
-    const shaStars = getShaStars(yearGan, hourIdx);
+    const shaStars = getShaStars(yearGan, hourIdx, yearZhi);
     const dikj = getDiKongJie(hourIdx);
     const badStars = { ...shaStars, ...dikj };
     for (const [star, dzIdx] of Object.entries(badStars)) {
@@ -3391,7 +3386,7 @@ function calculateChart(lunarYear, lunarMonth, lunarDay, hourIdx, gender, isLeap
 
     const daxianList = []; // ordered list of daxian periods
     for (let i = 0; i < 12; i++) {
-        const idx = (mingDzIdx + daxianDir * (i + 1) + 120) % 12;
+        const idx = (mingDzIdx + daxianDir * i + 120) % 12;   // 第一大限就在命宮
         const p = palaces.find(pp => pp.dzIdx === idx);
         if (p) {
             const startAge = daxianStart + i * 10;
