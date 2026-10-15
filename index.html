@@ -320,7 +320,7 @@
         <div class="ctrl-group">
             <label>出生時辰</label>
             <select id="birthHour">
-                <option value="0">子時 (23-01)</option>
+                <option value="0">早子時 (00-01)</option>
                 <option value="1">丑時 (01-03)</option>
                 <option value="2">寅時 (03-05)</option>
                 <option value="3">卯時 (05-07)</option>
@@ -332,6 +332,7 @@
                 <option value="9">酉時 (17-19)</option>
                 <option value="10">戌時 (19-21)</option>
                 <option value="11">亥時 (21-23)</option>
+                <option value="12">晚子時 (23-24)</option>
             </select>
         </div>
         <div class="ctrl-group">
@@ -3591,13 +3592,22 @@ function runChart() {
     const solarY = parseInt(document.getElementById('solarYear').value);
     const solarM = parseInt(document.getElementById('solarMonth').value);
     const solarD = parseInt(document.getElementById('solarDay').value);
-    const hr = parseInt(document.getElementById('birthHour').value);
+    const hrSel = parseInt(document.getElementById('birthHour').value);
     const gd = document.getElementById('gender').value;
+    // 晚子時（23:00–24:00）：日期算到隔天、時辰為子時
+    const isLateZi = hrSel === 12;
+    const hr = isLateZi ? 0 : hrSel;
     const fy = parseInt(document.getElementById('flowYear').value);
 
     // 國曆→農曆轉換
-    const lunar = solarToLunar(solarY, solarM, solarD);
-    lastLunar = { ...lunar, solarY, solarM, solarD };
+    let lunar;
+    if (isLateZi) {
+        const nd = new Date(Date.UTC(solarY, solarM - 1, solarD + 1));
+        lunar = solarToLunar(nd.getUTCFullYear(), nd.getUTCMonth() + 1, nd.getUTCDate());
+    } else {
+        lunar = solarToLunar(solarY, solarM, solarD);
+    }
+    lastLunar = { ...lunar, solarY, solarM, solarD, isLateZi };
 
     chartData = calculateChart(lunar.year, lunar.month, lunar.day, hr, gd, lunar.isLeap ? 1 : 0);
 
@@ -3639,7 +3649,7 @@ function updateBirthInfo() {
     const lunarStr = L ? `${L.year}年${leapTag}${monthNames[L.month]}月${dayNames[L.day] || L.day + '日'}` : '';
 
     document.getElementById('birthInfo').innerHTML =
-        `國曆 ${L ? L.solarY : ''}/${L ? L.solarM : ''}/${L ? L.solarD : ''} → 農曆 <b>${lunarStr}</b>　${hourNames[hr]}時　｜　` +
+        `國曆 ${L ? L.solarY : ''}/${L ? L.solarM : ''}/${L ? L.solarD : ''} → 農曆 <b>${lunarStr}</b>　${hr === 12 ? '晚子時（日期算隔日）' : (hr === 0 ? '早子時' : hourNames[hr] + '時')}　｜　` +
         `<b>${d.yearGan}${d.yearZhi}年</b>　${juName}　${d.daxianDir}　｜　` +
         `流年${flowYearGan}（${fy}）虛歲${currentAge}　｜　` +
         `<b style="color:var(--gold-light)">${dxInfo}</b>`;
