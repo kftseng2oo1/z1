@@ -3461,6 +3461,138 @@ function getDouJunDz(flowZhiIdx, birthMonth, hourIdx) {
     return ((flowZhiIdx - (birthMonth - 1) + hourIdx) % 12 + 12) % 12;
 }
 // 十二地支的疊宮資料：本命／大限／流年 各是什麼宮
+// ================================================================
+//  流年／流月引動引擎
+// ================================================================
+// 流月干：以流年干五虎遁，正月建寅
+function getMonthGan(yearGan, lunarMonth) {
+    return getPalaceGan(yearGan, (2 + lunarMonth - 1) % 12);
+}
+// 流年星曜（依流年干支）
+const FLOW_CHANG = {甲:'巳',乙:'午',丙:'申',丁:'酉',戊:'申',己:'酉',庚:'亥',辛:'子',壬:'寅',癸:'卯'};
+const FLOW_QU    = {甲:'酉',乙:'申',丙:'午',丁:'巳',戊:'午',己:'巳',庚:'卯',辛:'寅',壬:'子',癸:'亥'};
+function getFlowStars(gan, zhi) {
+    const lu = getLucun(gan)['祿存'];
+    const ky = getKuiYue(gan);
+    return {
+        '流祿': lu,
+        '流羊': (lu + 1) % 12,
+        '流陀': (lu + 11) % 12,
+        '流昌': DZ_INDEX[FLOW_CHANG[gan]],
+        '流曲': DZ_INDEX[FLOW_QU[gan]],
+        '流魁': ky['天魁'],
+        '流鉞': ky['天鉞'],
+        '流馬': getTianma(zhi)['天馬'],
+    };
+}
+
+const HUA_WEIGHT = { 祿: 3, 權: 2, 科: 1, 忌: -3 };
+const LAYER_FACTOR = { 生年: 0.5, 大限: 1, 流年: 1.5, 流月: 1.5 };
+
+// 計算各地支的引動分數與事件
+// layers: [{ label:'生年'|'大限'|'流年'|'流月', gan }]
+// flowStars: getFlowStars 結果（流年星曜）
+function scoreLayers(palaces, layers, flowStars) {
+    const S = Array.from({ length: 12 }, () => ({ score: 0, events: [], hua: [] }));
+    const add = (dz, v, ev) => { S[dz].score += v; if (ev) S[dz].events.push({ v, text: ev }); };
+    const dzOf = (name) => { const p = palaces.find(pp => pp.name === name); return p ? p.dzIdx : null; };
+
+    layers.forEach(L => {
+        const fly = computeFly(palaces, L.gan);
+        if (!fly) return;
+        const f = LAYER_FACTOR[L.label] || 1;
+        SH_KEYS.forEach(k => {
+            const dz = dzOf(fly[k].targetPalace);
+            if (dz === null) return;
+            S[dz].hua.push({ layer: L.label, k, star: fly[k].star });
+            add(dz, HUA_WEIGHT[k] * f, null);
+            if (k === '忌') add((dz + 6) % 12, -1.5 * f, `${L.label}${fly[k].star}忌沖`);
+        });
+    });
+
+    for (let dz = 0; dz < 12; dz++) {
+        const hua = S[dz].hua;
+        const ji = hua.filter(x => x.k === '忌');
+        const lu = hua.filter(x => x.k === '祿');
+        if (ji.length >= 2) add(dz, -3 * (ji.length - 1), `疊忌（${ji.map(x => x.layer + x.star).join('＋')}）`);
+        if (lu.length >= 2) add(dz, 2 * (lu.length - 1), `疊祿（${lu.map(x => x.layer + x.star).join('＋')}）`);
+        if (lu.length && ji.length) add(dz, -1, `祿忌同宮（${lu[0].layer}祿遇${ji[0].layer}忌）`);
+        // 祿逢忌沖：本宮有祿，對宮有「後一層」的忌
+        const oppJi = S[(dz + 6) % 12].hua.filter(x => x.k === '忌');
+        if (lu.length && oppJi.length) add(dz, -2, `祿逢沖破（${oppJi[0].layer}${oppJi[0].star}忌沖${lu[0].layer}祿）`);
+        if (flowStars) {
+            if (ji.length && flowStars['流祿'] === dz) add(dz, -2, '羊陀夾忌');
+            else if (ji.length && flowStars['流羊'] === dz) add(dz, -1.5, '流羊與忌同宮');
+            else if (ji.length && flowStars['流陀'] === dz) add(dz, -1, '流陀與忌同宮');
+            if (lu.length && flowStars['流祿'] === dz) add(dz, 1.5, '流祿存會祿');
+            if (flowStars['流魁'] === dz || flowStars['流鉞'] === dz) add(dz, 0.5, null);
+        }
+    }
+    return S;
+}
+
+// 分數 → 等級
+function scoreLevel(v) {
+    if (v >= 4)    return { key: 'great', label: '大吉', color: '#1e8449' };
+    if (v >= 1.5)  return { key: 'good',  label: '吉',   color: '#58a55c' };
+    if (v > -1.5)  return { key: 'flat',  label: '平',   color: '#aaa' };
+    if (v > -4)    return { key: 'bad',   label: '慎',   color: '#e67e22' };
+    return               { key: 'worst', label: '凶',   color: '#c0392b' };
+}
+
+const FLOW_DOMAINS = [
+    { key: '命宮',   label: '整體', icon: '🧭' },
+    { key: '財帛宮', label: '財運', icon: '💰' },
+    { key: '官祿宮', label: '事業', icon: '💼' },
+    { key: '夫妻宮', label: '感情', icon: '💖' },
+    { key: '疾厄宮', label: '健康', icon: '🩺' },
+    { key: '田宅宮', label: '家宅', icon: '🏠' },
+    { key: '遷移宮', label: '外出', icon: '✈️' },
+];
+
+// 依某層命宮，取得各領域的分數與事件
+function domainScores(S, layerMingDz) {
+    return FLOW_DOMAINS.map(d => {
+        const idx = PALACE_NAMES.indexOf(d.key);
+        const dz = ((layerMingDz - idx) % 12 + 12) % 12;
+        const cell = S[dz];
+        return { ...d, dz, score: cell.score, level: scoreLevel(cell.score), events: cell.events, hua: cell.hua };
+    });
+}
+
+// 整年＋12個月分析
+function analyzeFlowYear(chart, daxian, westernYear) {
+    const yGan = getFlowYearGan(westernYear);
+    const yZhiIdx = getFlowYearZhiIdx(westernYear);
+    const flowStars = getFlowStars(yGan, DI_ZHI[yZhiIdx]);
+    const base = [{ label: '生年', gan: chart.yearGan }];
+    if (daxian) base.push({ label: '大限', gan: daxian.gan });
+    base.push({ label: '流年', gan: yGan });
+
+    const yearS = scoreLayers(chart.palaces, base, flowStars);
+    const year = domainScores(yearS, yZhiIdx);
+
+    const douJun = getDouJunDz(yZhiIdx, chart.effectiveMonth || chart.lunarMonth, chart.hourIdx);
+    const months = [];
+    for (let m = 1; m <= 12; m++) {
+        const mGan = getMonthGan(yGan, m);
+        const mMing = (douJun + m - 1) % 12;
+        const S = scoreLayers(chart.palaces, [...base, { label: '流月', gan: mGan }], flowStars);
+        const doms = domainScores(S, mMing);
+        // 應期：流月命宮走到流年分數最極端的宮位
+        const peak = yearS.reduce((a, c, i) => Math.abs(c.score) > Math.abs(a.s) ? { s: c.score, i } : a, { s: 0, i: -1 });
+        months.push({
+            m, gan: mGan, zhi: DI_ZHI[(2 + m - 1) % 12], mingDz: mMing,
+            benName: (palaceByDz(chart.palaces, mMing) || {}).name || '',
+            fly: computeFly(chart.palaces, mGan),
+            domains: doms,
+            isPeak: peak.i === mMing && Math.abs(peak.s) >= 3,
+            peakScore: peak.s,
+        });
+    }
+    return { yGan, yZhi: DI_ZHI[yZhiIdx], flowStars, yearS, year, douJun, months };
+}
+
 function buildOverlay(chart, daxian, westernYear) {
     const fyZhi = getFlowYearZhiIdx(westernYear);
     const dxMing = daxian ? daxian.dzIdx : null;
@@ -4536,6 +4668,72 @@ function buildOverlayHtml(palaces, yGan) {
     return html;
 }
 
+const FLOW_ADVICE = {
+    '整體': { pos:'運勢順，適合推動重要計畫、主動爭取機會。', flat:'平穩之年，按部就班，累積實力。', neg:'壓力集中在自身，重大決策放慢，先求穩再求進。' },
+    '財運': { pos:'進財機會多，可主動開源；獲利要落袋為安。', flat:'收支平穩，維持既有理財配置即可。', neg:'易有破耗，避免高槓桿與借貸擔保，先守住現金流。' },
+    '事業': { pos:'工作有表現舞台，適合爭取升遷、主導專案。', flat:'職場平穩，把手上工作做好、做出口碑。', neg:'職場壓力大，文件留底、少硬碰硬，重大轉換宜延後。' },
+    '感情': { pos:'感情升溫，適合確認關係、安排相處時間。', flat:'感情平順，維持日常經營。', neg:'易有誤會摩擦，多傾聽少計較，避免情緒性決定。' },
+    '健康': { pos:'體況佳，適合養成運動習慣或調理舊疾。', flat:'作息正常即可，定期健檢。', neg:'能量偏低，注意過勞與慢性問題，安排健檢並增加休息。' },
+    '家宅': { pos:'利置產、搬遷、裝修，家運和順。', flat:'家中平穩，無須大動。', neg:'不宜簽約置產或大興土木，留意家人與房屋修繕。' },
+    '外出': { pos:'外出有機緣，利出差、拓展人脈與業務。', flat:'外出平常，照計畫進行。', neg:'外出多變數，注意交通安全，對外合作多確認細節。' },
+};
+
+function flowAdviceKey(level) {
+    return (level.key === 'great' || level.key === 'good') ? 'pos' : level.key === 'flat' ? 'flat' : 'neg';
+}
+
+function buildFlowEngineHtml(R) {
+    const fmt = v => (v > 0 ? '+' : '') + (Math.round(v * 10) / 10);
+    const chip = (d) => `<span style="color:${d.level.color};font-weight:700;white-space:nowrap;">${d.level.label}</span>`;
+    const topEvents = (d) => d.events.filter(e => e.text).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 2).map(e => e.text);
+    const huaText = (d) => d.hua.map(x => `${x.layer}${x.star}化${x.k}`).join('、');
+
+    let html = `<br><u>★ 流年引動評分（本命＋大限＋流年三層疊加）</u>：<br>`;
+    html += `<div style="font-size:.82em;opacity:.65;margin-bottom:6px;">以流年宮位論領域。分數綜合三層四化落宮（祿+3 權+2 科+1 忌−3，流年權重最高）、忌沖對宮、疊忌、祿逢沖破、流年羊陀夾忌等規則。</div>`;
+    const fs = R.flowStars;
+    html += `<div style="font-size:.85em;margin-bottom:8px;">流年星曜：` +
+        ['流祿','流羊','流陀','流昌','流曲','流魁','流鉞','流馬'].map(k => `${k}${DI_ZHI[fs[k]]}`).join('　') + `</div>`;
+    html += `<table class="ov-table"><tr><th>領域</th><th>評等</th><th>引動</th></tr>`;
+    R.year.forEach(d => {
+        const evs = topEvents(d);
+        const hua = huaText(d);
+        html += `<tr><td>${d.icon}${d.label}<br><span style="opacity:.55;font-size:.9em;">流年${d.key.replace('宮','')}・${DI_ZHI[d.dz]}<br>（本命${(palaceByDz(chartData.palaces, d.dz) || {}).name || ''}）</span></td>` +
+                `<td>${chip(d)}<br><span style="opacity:.55;font-size:.9em;">${fmt(d.score)}</span></td>` +
+                `<td>${hua ? hua + '<br>' : ''}${evs.length ? '<b>' + evs.join('；') + '</b><br>' : ''}` +
+                `<span style="opacity:.8;">${FLOW_ADVICE[d.label][flowAdviceKey(d.level)]}</span></td></tr>`;
+    });
+    html += `</table>`;
+
+    // ── 流月評分表 ──
+    const MON = ['正','二','三','四','五','六','七','八','九','十','十一','十二'];
+    const show = ['財運','事業','感情','健康'];
+    html += `<u>★ 流月評分表（斗君在${DI_ZHI[R.douJun]}宮・流月干起四化）</u>：<br>`;
+    html += `<div style="font-size:.82em;opacity:.65;margin-bottom:6px;">每月以流月命宮重新定十二宮，並加入月干四化。🔔＝應期月：流月命宮走到今年引動最強的宮位，事情最容易在這個月發生。</div>`;
+    html += `<table class="ov-table"><tr><th>流月</th>${show.map(s => `<th>${s.slice(0,1)}</th>`).join('')}<th>重點</th></tr>`;
+    R.months.forEach(M => {
+        const doms = M.domains.filter(d => show.includes(d.label));
+        // 重點：四個領域中絕對值最大者
+        const key = doms.slice().sort((a, b) => Math.abs(b.score) - Math.abs(a.score))[0];
+        const evs = key ? topEvents(key) : [];
+        let note = key && Math.abs(key.score) >= 1.5
+            ? `${key.label}${key.level.label}${evs.length ? '：' + evs[0] : ''}`
+            : '平穩';
+        if (M.isPeak) {
+            const pk = R.yearS[M.mingDz];
+            const pkEv = pk.events.filter(e => e.text).sort((a, b) => Math.abs(b.v) - Math.abs(a.v))[0];
+            note = `<b>🔔 應期：流月命宮走到今年引動最強的本命${M.benName}（${pk.score > 0 ? '吉' : '凶'}${fmt(pk.score)}${pkEv ? '，' + pkEv.text : ''}）</b>` + (note === '平穩' ? '' : '<br>' + note);
+        }
+        html += `<tr${M.isPeak ? ' class="ov-ming"' : ''}>` +
+                `<td style="white-space:nowrap;"><b>${MON[M.m - 1]}月</b>${M.isPeak ? '🔔' : ''} ${M.gan}${M.zhi}<br>` +
+                `<span style="opacity:.6;font-size:.9em;">命${DI_ZHI[M.mingDz]}・本${PALACE_SHORT[PALACE_NAMES.indexOf(M.benName)] || ''}</span><br>` +
+                `<span style="font-size:.9em;"><span style="color:#1e8449">${M.fly['祿'].star}祿</span> <span style="color:#c0392b">${M.fly['忌'].star}忌</span></span></td>` +
+                doms.map(d => `<td>${chip(d)}</td>`).join('') +
+                `<td>${note}</td></tr>`;
+    });
+    html += `</table>`;
+    return html;
+}
+
 function renderReport() {
     document.getElementById('reportArea').style.display = 'block';
     const palaces = chartData.palaces;
@@ -5039,106 +5237,8 @@ function renderReport() {
             card12 += `外在環境對財務形成衝擊，投資容易接刀，建議空手觀望或嚴守停損。<br>`;
             card12 += `<b style="color:var(--jade)">💡 行動綱要：🚨 全面撤守——清倉高風險部位，此年最佳策略為「不虧就是賺」，靜待流年過去。</b><br><br>`;
         }
-        // ── 流月行動曆（動態斗君版）──
-        // 斗君公式：流年地支宮起，逆數生月，順數生時，得斗君宮（正月所在宮位）
-        // chartData.lunarMonth = 出生農曆月（1–12），chartData.hourIdx = 時辰索引（0–11）
-        {
-            const bMonth  = chartData.effectiveMonth || chartData.lunarMonth || 1;
-            const bHour   = chartData.hourIdx    || 0;
-            // 斗君：以「流年」地支起正月（之前誤用出生年地支）
-            const flowYearDzIdx = getFlowYearZhiIdx(flowYearNum);
-            const douGunDzIdx = getDouJunDz(flowYearDzIdx, bMonth, bHour);
-
-            // 月份名稱對照
-            const MON_NAMES = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
-
-            // 宮位名稱（依 dzIdx 逆查 palaces）
-            const getPalaceNameByDz = (dzIdx) => {
-                const p = palaces.find(pp => pp.dzIdx === dzIdx);
-                return p ? p.name : '?';
-            };
-
-            // 流年四化星
-            const yFlyM = computeFly(palaces, yGan);
-
-            // 計算每個月份：斗君宮順推，第 n 月 = douGunDzIdx + (n-1)
-            // 宮位干 → 四化星落宮 → 診斷
-            const FOCUS_PALACES = {
-                '財帛宮':  { icon:'💰', color:'var(--lu)',    label:'財運' },
-                '田宅宮':  { icon:'💰', color:'var(--lu)',    label:'財運' },
-                '官祿宮':  { icon:'💼', color:'var(--quan)',  label:'職涯' },
-                '遷移宮':  { icon:'💼', color:'var(--quan)',  label:'職涯' },
-                '疾厄宮':  { icon:'🩺', color:'#2ecc71',     label:'健康' },
-                '夫妻宮':  { icon:'💖', color:'#fd79a8',     label:'感情' },
-                '命宮':    { icon:'💖', color:'#fd79a8',     label:'感情' },
-            };
-
-            const HUA_DESC = {
-                '財帛宮': { '祿':'吸財磁場強，啟動理財或進場投資。', '忌':'忌沖財位，嚴禁高槓桿，主動轉定存或黃金鎖定。', '權':'財務主導力強，爭取報酬、果斷決策。', '科':'貴人帶財，善用口碑與人脈廣結善緣。' },
-                '田宅宮': { '祿':'家產增值，適合簽約置產。', '忌':'房產承壓，切勿此月簽約或動土。', '權':'積極擴充不動產或改善居家環境。', '科':'有名師或好房仲緣，可廣詢比較。' },
-                '官祿宮': { '祿':'事業旺，財富透過本業自然流入。', '忌':'職場壓力大，備份所有文件，重要決策推延。', '權':'爭取升遷、主導專案的最佳時機。', '科':'進修考照或尋求長輩推薦，形象加分。' },
-                '遷移宮': { '祿':'外出機緣好，適合拓展人脈或業務。', '忌':'⚠ 反沖財帛，謹防外部衝擊財源，全面撤守。', '權':'外部資源整合力強，可主動出擊拓展。', '科':'有外地貴人，出差或旅行利於事業。' },
-                '疾厄宮': { '祿':'體質外散，規律作息，勿輕忽慢性積累。', '忌':'能量最低點，強制增加睡眠，暫停高強度運動。', '權':'體能強但易過勞，注意肌骨與血壓。', '科':'有名醫緣，是年度健檢或調理痼疾的好時機。' },
-                '夫妻宮': { '祿':'感情升溫，適合確認關係或安排旅行。', '忌':'情緒償債期，主動承擔，給予超額關懷。', '權':'情感主導權強，易有衝突，宜以柔克剛。', '科':'伴侶關係穩定，有名分確認或公開機緣。' },
-                '命宮':   { '祿':'個人能量高峰，積極推進重要決策。', '忌':'自身承壓，凡事保守，減少高風險決策。', '權':'主導力強旺，果斷行事，注意不強硬。', '科':'貴人護體，遇困難尋求專業協助。' },
-            };
-
-            // 掃描 12 個月
-            const monthEvents = Array.from({length:12}, (_,i) => ({month:i+1, items:[]}));
-
-            // 流年四化各星落宮 → 找到該宮在流月第幾個月出現
-            ['祿','權','科','忌'].forEach(ht => {
-                const flyInfo = yFlyM[ht];
-                if (!flyInfo) return;
-                const targetPalace = flyInfo.targetPalace;
-                // 找出目標宮位的 dzIdx
-                const tp = palaces.find(pp => pp.name === targetPalace);
-                if (!tp) return;
-                // 該宮在流月第幾月出現：(tp.dzIdx - douGunDzIdx + 12) % 12 + 1
-                const monthNum = ((tp.dzIdx - douGunDzIdx + 12) % 12) + 1;
-                const GENERIC_GUIDE12 = { '祿':'此宮能量充沛，主動把握機緣，積極擴展佈局。', '權':'此宮主導力強，果斷推進重要決策，爭取主動權。', '科':'此宮有貴人名聲加持，遇困難尋求專業協助，以柔克剛。', '忌':'此宮壓力匯聚，轉攻為守，避免在此領域冒進或做重大決策。' };
-                const desc = HUA_DESC[targetPalace]?.[ht] || GENERIC_GUIDE12[ht];
-                const fp = FOCUS_PALACES[targetPalace] || { icon: ht==='忌'?'⚠️':ht==='祿'?'🎯':ht==='權'?'⚡':'🌟', color: ht==='忌'?'var(--ji)':ht==='祿'?'var(--lu)':ht==='權'?'var(--quan)':'var(--ke)', label: targetPalace };
-                monthEvents[monthNum-1].items.push({ ht, targetPalace, star: flyInfo.star, desc, ...fp });
-                // 對宮沖（遷移忌沖財帛）
-                if (ht === '忌' && targetPalace === '遷移宮') {
-                    monthEvents[monthNum-1].items.push({ ht:'忌', targetPalace:'財帛宮（被沖）', star:flyInfo.star,
-                        desc:'流年忌入遷移反沖財帛，外部市場衝擊財源，全面撤守、不虧就是賺。',
-                        icon:'🚨', color:'#d63031', label:'財運' });
-                }
-            });
-
-            // 生成 HTML
-            card12 += '<br><u>★ 流月行動曆（個人化・斗君定正月）</u>：<br>';
-            card12 += '<div style="font-size:.82em;opacity:.6;margin-bottom:8px;">以斗君定各人正月起點，流年四化觸動之月為引動應期。吉月主動擴張，凶月沉潛守成。</div>';
-
-            const sec12 = (col,ic,t,r) =>
-                '<div style="margin:4px 0;padding:5px 10px;border-left:3px solid '+col+';font-size:.88em;">'+
-                '<b style="color:'+col+'">'+ic+' 農曆'+t+'月</b>　'+r+'</div>';
-
-            // 按月份輸出有事件的月份
-            let hasAnyMonth = false;
-            monthEvents.forEach(me => {
-                if (!me.items.length) return;
-                hasAnyMonth = true;
-                me.items.forEach(item => {
-                    const huaCls = item.ht==='忌' ? '⚠ 慎' : item.ht==='祿' ? '🎯 旺' : item.ht==='權' ? '⚡ 動' : '🌟 吉';
-                    const isWarning = item.ht === '忌';
-                    const border = isWarning ? '#d63031' : item.color;
-                    // 超級警戒：同月有雙忌
-                    const isSuper = me.items.filter(x=>x.ht==='忌').length >= 2;
-                    const prefix = isSuper ? '🔴 超級警戒・' : '';
-                    card12 += sec12(border, item.icon,
-                        prefix + MON_NAMES[me.month-1],
-                        '<b>['+item.label+'] '+huaCls+'（'+item.ht+'）</b> 流年'+item.ht+'入【'+item.targetPalace+'】（'+item.star+'）<br>'+item.desc +
-                        (isWarning ? '<br><b style="color:var(--jade)">💡 解決之道：' + (HUA_DESC[item.targetPalace]?.[item.ht] || item.desc) + '</b>' : '')
-                    );
-                });
-            });
-            if (!hasAnyMonth) {
-                card12 += '<div style="opacity:.6;font-size:.9em;">流年四化未觸動個人命盤主要宮位，全年月份平穩，依常規計畫執行。</div>';
-            }
-        }
+        // ── 流年引動評分＋流月評分表 ──
+        card12 += buildFlowEngineHtml(analyzeFlowYear(chartData, currentDaxian, flowYearNum));
     } else {
         card12 = '（請輸入流年後即可查看本年度進場點診斷。）';
     }
