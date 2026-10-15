@@ -191,6 +191,14 @@
         .ov-table th { color:#999; font-weight:400; }
         .ov-table tr.ov-ming td { background:rgba(31,95,139,0.07); font-weight:700; }
         .ov-table .ov-hua { white-space:nowrap; }
+        .heat-strip { margin:18px 0 12px; font-size:11px; }
+        .hs-row { display:grid; grid-template-columns:18px repeat(12, 1fr); gap:2px; margin-bottom:2px; align-items:center; }
+        .hs-head span { text-align:center; color:#999; font-size:10px; position:relative; }
+        .hs-head i { position:absolute; top:-12px; left:50%; transform:translateX(-50%); font-style:normal; font-size:9px; }
+        .hs-lbl { color:#666; font-weight:700; }
+        .hs-cell { height:16px; border-radius:3px; display:block; }
+        .hs-legend { display:flex; gap:10px; justify-content:flex-end; color:#999; font-size:10px; margin-top:4px; }
+        .hs-legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:3px; vertical-align:-1px; }
         .body-tag { position:absolute; top:6px; right:6px; font-size:9px; color:#999; }
 
         .fly-indicators { position:absolute; top:20px; right:6px; display:flex; flex-direction:column; gap:2px; align-items:flex-end; }
@@ -4678,8 +4686,47 @@ const FLOW_ADVICE = {
     '外出': { pos:'外出有機緣，利出差、拓展人脈與業務。', flat:'外出平常，照計畫進行。', neg:'外出多變數，注意交通安全，對外合作多確認細節。' },
 };
 
+// 取該宮最具影響力的化曜：流月 > 流年 > 大限 > 生年；同層忌優先於祿
+function dominantHua(hua) {
+    const order = { 流月: 0, 流年: 1, 大限: 2, 生年: 3 };
+    const kOrd = { 忌: 0, 祿: 1, 權: 2, 科: 3 };
+    return hua.slice().sort((a, b) => (order[a.layer] - order[b.layer]) || (kOrd[a.k] - kOrd[b.k]))[0] || null;
+}
+// 星性註解：依領域挑最貼切的描述
+function starHuaNote(star, k, domainLabel, maxLen) {
+    const info = STAR_DB[star];
+    if (!info) return '';
+    let t = '';
+    if (k === '忌' && domainLabel === '健康' && info.health_ji) t = '易見' + info.health_ji;
+    else if (k === '忌' && domainLabel === '感情' && info.love_ji) t = info.love_ji;
+    else if (info.huaEffect && info.huaEffect[k]) t = info.huaEffect[k];
+    t = t.split('。')[0];
+    if (maxLen && t.length > maxLen) t = t.split('，')[0];
+    if (maxLen && t.length > maxLen) t = t.slice(0, maxLen) + '…';
+    return t;
+}
+
 function flowAdviceKey(level) {
     return (level.key === 'great' || level.key === 'good') ? 'pos' : level.key === 'flat' ? 'flat' : 'neg';
+}
+
+// 12 個月 × 領域 熱度條
+function buildHeatStrip(R, show) {
+    const MON = ['正','二','三','四','五','六','七','八','九','十','冬','臘'];
+    let html = `<div class="heat-strip"><div class="hs-row hs-head"><span></span>` +
+        R.months.map(M => `<span>${MON[M.m - 1]}${M.isPeak ? '<i>🔔</i>' : ''}</span>`).join('') + `</div>`;
+    show.forEach(lbl => {
+        html += `<div class="hs-row"><span class="hs-lbl">${lbl.slice(0, 1)}</span>` +
+            R.months.map(M => {
+                const d = M.domains.find(x => x.label === lbl);
+                return `<span class="hs-cell" style="background:${d.level.color};opacity:${d.level.key === 'flat' ? .25 : .9};" title="${MON[M.m - 1]}月 ${lbl}${d.level.label}"></span>`;
+            }).join('') + `</div>`;
+    });
+    html += `<div class="hs-legend">` + ['大吉','吉','平','慎','凶'].map((l, i) => {
+        const c = ['#1e8449','#58a55c','#aaa','#e67e22','#c0392b'][i];
+        return `<span><i style="background:${c};opacity:${l === '平' ? .25 : .9}"></i>${l}</span>`;
+    }).join('') + `</div></div>`;
+    return html;
 }
 
 function buildFlowEngineHtml(R) {
@@ -4687,6 +4734,15 @@ function buildFlowEngineHtml(R) {
     const chip = (d) => `<span style="color:${d.level.color};font-weight:700;white-space:nowrap;">${d.level.label}</span>`;
     const topEvents = (d) => d.events.filter(e => e.text).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 2).map(e => e.text);
     const huaText = (d) => d.hua.map(x => `${x.layer}${x.star}化${x.k}`).join('、');
+    const yearStarLine = (d) => {
+        const p = palaceByDz(chartData.palaces, d.dz);
+        const opp = palaceByDz(chartData.palaces, (d.dz + 6) % 12);
+        const mains = p && p.stars.m.length ? p.stars.m.join('、')
+            : `空宮，借對宮${opp && opp.stars.m.length ? opp.stars.m.join('、') : ''}`;
+        const dom = dominantHua(d.hua.filter(x => x.layer !== '生年'));
+        const note = dom ? starHuaNote(dom.star, dom.k, d.label) : '';
+        return `<span style="font-size:.92em;color:#8a6d1f;">宮內：${mains}${dom && note ? `｜${dom.star}化${dom.k}：${note}` : ''}</span><br>`;
+    };
 
     let html = `<br><u>★ 流年引動評分（本命＋大限＋流年三層疊加）</u>：<br>`;
     html += `<div style="font-size:.82em;opacity:.65;margin-bottom:6px;">以流年宮位論領域。分數綜合三層四化落宮（祿+3 權+2 科+1 忌−3，流年權重最高）、忌沖對宮、疊忌、祿逢沖破、流年羊陀夾忌等規則。</div>`;
@@ -4697,9 +4753,10 @@ function buildFlowEngineHtml(R) {
     R.year.forEach(d => {
         const evs = topEvents(d);
         const hua = huaText(d);
-        html += `<tr><td>${d.icon}${d.label}<br><span style="opacity:.55;font-size:.9em;">流年${d.key.replace('宮','')}・${DI_ZHI[d.dz]}<br>（本命${(palaceByDz(chartData.palaces, d.dz) || {}).name || ''}）</span></td>` +
+        html += `<tr><td style="white-space:nowrap;">${d.icon}${d.label}<br><span style="opacity:.55;font-size:.9em;white-space:nowrap;">年${PALACE_SHORT[PALACE_NAMES.indexOf(d.key)]}・${DI_ZHI[d.dz]}<br>本${PALACE_SHORT[PALACE_NAMES.indexOf((palaceByDz(chartData.palaces, d.dz) || {}).name)] || ''}</span></td>` +
                 `<td>${chip(d)}<br><span style="opacity:.55;font-size:.9em;">${fmt(d.score)}</span></td>` +
                 `<td>${hua ? hua + '<br>' : ''}${evs.length ? '<b>' + evs.join('；') + '</b><br>' : ''}` +
+                yearStarLine(d) +
                 `<span style="opacity:.8;">${FLOW_ADVICE[d.label][flowAdviceKey(d.level)]}</span></td></tr>`;
     });
     html += `</table>`;
@@ -4709,6 +4766,7 @@ function buildFlowEngineHtml(R) {
     const show = ['財運','事業','感情','健康'];
     html += `<u>★ 流月評分表（斗君在${DI_ZHI[R.douJun]}宮・流月干起四化）</u>：<br>`;
     html += `<div style="font-size:.82em;opacity:.65;margin-bottom:6px;">每月以流月命宮重新定十二宮，並加入月干四化。🔔＝應期月：流月命宮走到今年引動最強的宮位，事情最容易在這個月發生。</div>`;
+    html += buildHeatStrip(R, show);
     html += `<table class="ov-table"><tr><th>流月</th>${show.map(s => `<th>${s.slice(0,1)}</th>`).join('')}<th>重點</th></tr>`;
     R.months.forEach(M => {
         const doms = M.domains.filter(d => show.includes(d.label));
@@ -4718,6 +4776,11 @@ function buildFlowEngineHtml(R) {
         let note = key && Math.abs(key.score) >= 1.5
             ? `${key.label}${key.level.label}${evs.length ? '：' + evs[0] : ''}`
             : '平穩';
+        if (key && Math.abs(key.score) >= 1.5) {
+            const dom = dominantHua(key.hua.filter(x => x.layer === '流月' || x.layer === '流年'));
+            const sn = dom ? starHuaNote(dom.star, dom.k, key.label, 22) : '';
+            if (sn) note += `<br><span style="font-size:.9em;color:#8a6d1f;">${dom.star}化${dom.k}：${sn}</span>`;
+        }
         if (M.isPeak) {
             const pk = R.yearS[M.mingDz];
             const pkEv = pk.events.filter(e => e.text).sort((a, b) => Math.abs(b.v) - Math.abs(a.v))[0];
@@ -5953,6 +6016,32 @@ let aiChatMessages = [];   // 完整對話歷史（送給 API）
 let aiSystemPrompt = '';   // 命盤 system context
 
 // 建立命盤 context（排盤後呼叫一次）
+function buildFlowAIText(chart, daxian, fy) {
+    const R = analyzeFlowYear(chart, daxian, fy);
+    const fmt = v => (v > 0 ? '+' : '') + (Math.round(v * 10) / 10);
+    const MON = ['正','二','三','四','五','六','七','八','九','十','十一','十二'];
+    const evText = (d) => d.events.filter(e => e.text).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 2).map(e => e.text).join('、');
+    const lines = ['【系統引動評分】（生年、大限、流年、流月四化加權；祿+3權+2科+1忌−3，含忌沖、疊忌、祿逢沖破、羊陀夾忌）'];
+    lines.push(`流年星曜：` + ['流祿','流羊','流陀','流昌','流曲','流魁','流鉞','流馬'].map(k => k + DI_ZHI[R.flowStars[k]]).join(' '));
+    lines.push('年度領域（以流年宮論）：');
+    R.year.forEach(d => {
+        const p = palaceByDz(chart.palaces, d.dz);
+        lines.push(`- ${d.label}：流年${d.key}在${DI_ZHI[d.dz]}（本命${p ? p.name : '?'}，主星${p && p.stars.m.length ? p.stars.m.join('') : '空宮'}）${d.level.label}${fmt(d.score)}` +
+            (d.hua.length ? `｜化曜：${d.hua.map(x => x.layer + x.star + '化' + x.k).join('、')}` : '') +
+            (evText(d) ? `｜${evText(d)}` : ''));
+    });
+    lines.push(`流月（斗君在${DI_ZHI[R.douJun]}）：`);
+    R.months.forEach(M => {
+        const ds = M.domains.filter(d => ['財運','事業','感情','健康'].includes(d.label));
+        const hot = ds.slice().sort((a, b) => Math.abs(b.score) - Math.abs(a.score))[0];
+        lines.push(`- ${MON[M.m - 1]}月${M.gan}${M.zhi}（流月命宮${DI_ZHI[M.mingDz]}=本命${M.benName}，月祿${M.fly['祿'].star} 月忌${M.fly['忌'].star}）` +
+            ds.map(d => d.label.slice(0, 1) + d.level.label).join(' ') +
+            (hot && Math.abs(hot.score) >= 1.5 && evText(hot) ? `｜${evText(hot)}` : '') +
+            (M.isPeak ? '｜★應期月' : ''));
+    });
+    return lines.join('\n');
+}
+
 function buildAIContext() {
     if (!chartData) return '';
     const palaces = chartData.palaces;
@@ -6000,6 +6089,9 @@ ${dxInfo}
 ${buildOverlay(chartData, (typeof currentDaxian !== 'undefined') ? currentDaxian : null, fy).sort((a, b) => a.yrIdx - b.yrIdx).map(o => `流年${o.yr}=本命${o.ben}${o.dx ? '=大限' + o.dx : ''}（${o.dz}）`).join('；')}
 流年四化：祿=${fySh.祿||'?'} 權=${fySh.權||'?'} 科=${fySh.科||'?'} 忌=${fySh.忌||'?'}
 
+${buildFlowAIText(chartData, (typeof currentDaxian !== 'undefined') ? currentDaxian : null, fy)}
+
+論流年、流月時，請以上方「系統引動評分」為骨架（領域吉凶、疊忌疊祿、應期月），再結合宮內主星與化曜星性細論，並指出具體月份；不要與評分結論矛盾，若有不同看法請說明理由。
 請以古典命理大師口吻回答，繁體中文，論斷精準直接，每次回答控制在300字以內。`;
 }
 
@@ -6065,7 +6157,7 @@ async function runAIMaster() {
     aiChatMessages = [];
     document.getElementById('aiChatHistory').innerHTML = '';
 
-    const firstQ = '請為我進行完整的紫微斗數論命，依序分析：命格總論、財運格局、事業職涯、感情婚姻、本大限重點、流年提示，最後給出3條具體行動建議。';
+    const firstQ = '請為我進行完整的紫微斗數論命，依序分析：命格總論、財運格局、事業職涯、感情婚姻、本大限重點、流年提示，最後給出3條具體行動建議；流年部分請點出吉月、慎月與應期月。';
     const loading = addLoading();
     try {
         const reply = await callAI(firstQ);
