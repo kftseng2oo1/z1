@@ -6619,7 +6619,7 @@ function fvSplit(text) {
 }
 
 // ---------------- 旁白腳本 ----------------
-function fvBuildScenes() {
+function fvBuildScenes(durs) {
     const R = analyzeFlowYear(chartData, currentDaxian, flowYearNum);
     const name = document.getElementById('personName')?.value?.trim() || '命主';
     const fyZhi = getFlowYearZhiIdx(flowYearNum);
@@ -6698,10 +6698,14 @@ function fvBuildScenes() {
     out += '以上為依飛星四化推算的參考，祝您流年順利。';
     scenes.push({ type: 'outro', R, best, weak, text: out });
 
-    // 切句與時間軸
-    let t0 = 0;
+    // 切句與時間軸（durs：外部提供的每句實際語音秒數，例如 tts-studio 的 edge-tts 結果）
+    let t0 = 0, si = 0;
     scenes.forEach(s => {
-        s.sents = fvSplit(s.text).map(text => ({ text, dur: fvSentDur(text) }));
+        s.sents = fvSplit(s.text).map(text => {
+            const d = durs && durs[si] != null ? durs[si] + 0.35 : fvSentDur(text);
+            si++;
+            return { text, dur: d };
+        });
         s.start = t0;
         s.dur = s.sents.reduce((a, x) => a + x.dur, 0) + 0.6;
         let st = t0 + 0.3;
@@ -6957,6 +6961,7 @@ function openFlowVideo() {
                     <button onclick="fvRecord()" id="fvRecBtn">⏺ 錄成影片</button>
                     <button onclick="fvPoster()">🖼 分享圖卡</button>
                     <button onclick="fvSrt()">📝 字幕檔</button>
+                    <button onclick="fvVoiceJob()">🎙 有聲版工作檔</button>
                     <button onclick="fvClose()">✕ 關閉</button>
                 </div>
                 <div id="fvMsg" class="fv-msg"></div>
@@ -7151,6 +7156,26 @@ async function fvSrt() {
     const blob = new Blob(['﻿' + fvSrtText(S.D)], { type: 'text/plain' });
     const r = await fvSave(blob, fvFileName('srt'), `${flowYearNum} 流年旁白字幕`);
     fvMsg(r === 'shared' ? '✅ 已分享字幕檔' : r === 'downloaded' ? '✅ 字幕檔已下載（可交給 TTS 工作室配台灣口音旁白）' : '');
+}
+
+// 有聲版工作檔：交給 tts-studio 用 edge-tts 配台灣口音並輸出有聲 MP4
+async function fvVoiceJob() {
+    const S = FV.state; if (!S) return;
+    const g = id => document.getElementById(id);
+    const job = {
+        type: 'z1-flow', version: 1,
+        url: location.origin + location.pathname,
+        input: {
+            solarY: +g('solarYear').value, solarM: +g('solarMonth').value, solarD: +g('solarDay').value,
+            hour: +g('birthHour').value, gender: g('gender').value, flowYear: +g('flowYear').value,
+            name: g('personName')?.value?.trim() || '',
+        },
+        voice: 'zh-TW-HsiaoChenNeural', rate: '+0%',
+        sentences: fvAllSents(S.D).map(x => x.text),
+    };
+    const blob = new Blob([JSON.stringify(job, null, 1)], { type: 'application/json' });
+    const r = await fvSave(blob, 'flow.json', '流年有聲版工作檔');
+    fvMsg(r === 'cancel' ? '' : '✅ 已輸出 flow.json：上傳到 tts-studio 的 jobs/（自訂名稱）/ 資料夾，約 10 分鐘後產生有聲 MP4');
 }
 
 // 錄成影片：依時間軸播放、字幕燒入（瀏覽器 TTS 聲音無法錄進檔案）
