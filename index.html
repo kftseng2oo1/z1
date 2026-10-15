@@ -191,6 +191,16 @@
         .ov-table th { color:#999; font-weight:400; }
         .ov-table tr.ov-ming td { background:rgba(31,95,139,0.07); font-weight:700; }
         .ov-table .ov-hua { white-space:nowrap; }
+        #fvOverlay { position:fixed; inset:0; background:rgba(10,6,2,.92); z-index:9999; display:none; align-items:center; justify-content:center; padding:12px; padding-top:max(12px, env(safe-area-inset-top)); padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+        #fvOverlay .fv-box { display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; max-width:480px; }
+        #fvCanvas { height:min(68vh, 840px); width:auto; max-width:100%; aspect-ratio:9/16; border-radius:10px; box-shadow:0 6px 30px rgba(0,0,0,.5); background:#f7f1e3; }
+        #fvOverlay .fv-bar { width:min(100%, calc(68vh * 9 / 16)); height:4px; background:rgba(255,255,255,.15); border-radius:2px; overflow:hidden; }
+        #fvProg { height:100%; width:0; background:#d4a843; }
+        #fvOverlay .fv-ctrl { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+        #fvOverlay .fv-ctrl button { background:rgba(255,255,255,.1); color:#f7f1e3; border:1px solid rgba(212,168,67,.5); border-radius:18px; padding:7px 12px; font-size:13px; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+        #fvOverlay .fv-ctrl button:active { background:rgba(212,168,67,.35); }
+        #fvOverlay .fv-msg { color:#d4a843; font-size:12px; min-height:16px; text-align:center; }
+        .fv-open-btn { display:inline-block; margin:4px 0 12px; padding:9px 16px; border-radius:20px; border:none; background:linear-gradient(135deg,#c0392b,#b8860b); color:#fff; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 2px 8px rgba(192,57,43,.3); }
         .heat-strip { margin:18px 0 12px; font-size:11px; }
         .hs-row { display:grid; grid-template-columns:18px repeat(12, 1fr); gap:2px; margin-bottom:2px; align-items:center; }
         .hs-head span { text-align:center; color:#999; font-size:10px; position:relative; }
@@ -5229,6 +5239,7 @@ function renderReport() {
     let card12 = '';
     if (yGan) {
         const yFly12 = computeFly(palaces, yGan);
+        card12 += `<button class="fv-open-btn" onclick="event.stopPropagation();openFlowVideo()">🎬 流年動畫旁白・分享下載</button><br>`;
         card12 += buildOverlayHtml(palaces, yGan);
         const YEAR_TARGETS_12 = {
             '財帛宮': {
@@ -6547,6 +6558,642 @@ runChart();
 //  部署到 GitHub Pages / Netlify 後自動啟用離線快取
 // ================================================================
 // （SW 已在 <head> 註冊，這裡不再重複）
+</script>
+<script>
+// ================================================================
+//  🎬 流年動畫旁白・分享下載
+//  依 analyzeFlowYear 結果產生直式 1080×1920 動畫；瀏覽器 TTS 旁白；
+//  可錄成影片（字幕燒入）、輸出分享圖卡 PNG、旁白字幕 SRT。
+// ================================================================
+const FV = {
+    W: 1080, H: 1920,
+    font: '"Noto Serif TC","PingFang TC","Heiti TC","Microsoft JhengHei",serif',
+    C: { paper: '#f7f1e3', paper2: '#efe4cc', ink: '#1a1008', gold: '#b8860b', goldL: '#d4a843',
+         red: '#c0392b', jade: '#0e6655', mute: '#8a7d6a' },
+    MON: ['正','二','三','四','五','六','七','八','九','十','十一','十二'],
+    state: null,
+};
+
+function fvLevelColor(key) {
+    return { great: '#1e8449', good: '#58a55c', flat: '#b9b2a4', bad: '#e67e22', worst: '#c0392b' }[key] || '#999';
+}
+function fvFmt(v) { return (v > 0 ? '+' : '') + (Math.round(v * 10) / 10); }
+function fvTopEvent(d) {
+    const e = d.events.filter(x => x.text).sort((a, b) => Math.abs(b.v) - Math.abs(a.v))[0];
+    return e ? e.text : '';
+}
+// 引動事件轉成適合唸出來的白話
+function fvEvSpeech(ev) {
+    if (!ev) return '';
+    let m;
+    const stack = (s, w) => { const a = s.split('＋'); return a.length === 2 ? `${a[0]}與${a[1]}雙${w}相疊` : `${a.join('、')}${['','','雙','三','四'][a.length] || '多'}${w}相疊`; };
+    if ((m = ev.match(/^疊祿（(.+)）$/))) return stack(m[1], '祿');
+    if ((m = ev.match(/^疊忌（(.+)）$/))) return stack(m[1], '忌');
+    if ((m = ev.match(/^祿逢沖破（(.+?)忌沖(.+?)祿）$/))) return `${m[2]}的祿被${m[1]}化忌沖破`;
+    if ((m = ev.match(/^祿忌同宮（(.+?)祿遇(.+?)忌）$/))) return `${m[1]}化祿遇上${m[2]}化忌`;
+    if ((m = ev.match(/^(.+?)忌沖$/))) return `${m[1]}化忌來沖`;
+    if (ev === '羊陀夾忌') return '化忌又被流年羊陀夾制';
+    if (ev === '流羊與忌同宮') return '化忌遇上流年擎羊';
+    if (ev === '流陀與忌同宮') return '化忌遇上流年陀羅';
+    if (ev === '流祿存會祿') return '流年祿存會合化祿';
+    return ev.replace(/（.*?）/g, '');
+}
+function fvLabelSpeech(l) { return l === '整體' ? '整體運勢' : l; }
+// 星性短句：只取第一個分句
+function fvStarShort(star, k, label) {
+    const t = starHuaNote(star, k, label) || '';
+    return t.split(/[，,；;、：]/)[0].slice(0, 14);
+}
+
+function fvMonthTotal(M) {
+    return M.domains.filter(d => ['財運','事業','感情','健康'].includes(d.label)).reduce((s, d) => s + d.score, 0);
+}
+// 估計一句旁白的秒數（台灣中文約每秒 4.5 字）
+function fvSentDur(t) { return Math.max(1.8, t.replace(/[，。、：；（）\s]/g, '').length / 4.5 + 0.5); }
+function fvSplit(text) {
+    // 不用 lookbehind（舊版 iOS Safari 不支援）
+    const out = []; let cur = '';
+    for (const ch of text) { cur += ch; if ('。！？'.includes(ch)) { out.push(cur.trim()); cur = ''; } }
+    if (cur.trim()) out.push(cur.trim());
+    return out.filter(Boolean);
+}
+
+// ---------------- 旁白腳本 ----------------
+function fvBuildScenes() {
+    const R = analyzeFlowYear(chartData, currentDaxian, flowYearNum);
+    const name = document.getElementById('personName')?.value?.trim() || '命主';
+    const fyZhi = getFlowYearZhiIdx(flowYearNum);
+    const mingP = palaceByDz(chartData.palaces, fyZhi);
+    const opp = palaceByDz(chartData.palaces, (fyZhi + 6) % 12);
+    const mains = mingP && mingP.stars.m.length ? mingP.stars.m.join('、')
+        : `空宮，借對宮${opp && opp.stars.m.length ? opp.stars.m.join('、') : ''}`;
+    const dxName = currentDaxian ? layerPalaceName(currentDaxian.dzIdx, fyZhi) : '';
+    const scenes = [];
+
+    // 1. 開場
+    scenes.push({
+        type: 'intro', R, name, mains,
+        text: `${name}，${flowYearNum}年，${R.yGan}${R.yZhi}流年運勢。` +
+              `今年流年命宮在${R.yZhi}宮，疊本命${mingP ? mingP.name : ''}${dxName ? '，也是大限的' + dxName : ''}。` +
+              `宮內主星是${mains}。`,
+    });
+
+    // 2. 七大領域
+    const active = R.year.filter(d => d.level.key !== 'flat').sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
+    let ov = '先看全年七大領域。';
+    active.slice(0, 4).forEach(d => {
+        const ev = fvTopEvent(d);
+        ov += `${fvLabelSpeech(d.label)}${d.level.label}${ev ? '，' + fvEvSpeech(ev) : ''}。`;
+    });
+    ov += active.length ? (active.length < R.year.length ? '其餘領域大致平穩。' : '') : '各領域大致平穩，宜按部就班。';
+    scenes.push({ type: 'overview', R, text: ov });
+
+    // 3. 十二個月熱度
+    const ranked = R.months.map(M => ({ M, t: fvMonthTotal(M) })).sort((a, b) => b.t - a.t);
+    const good = ranked.filter(x => x.t >= 2).slice(0, 3).map(x => x.M).sort((a, b) => a.m - b.m);
+    const bad = ranked.slice().reverse().filter(x => x.t <= -2).slice(0, 3).map(x => x.M).sort((a, b) => a.m - b.m);
+    const peak = R.months.find(M => M.isPeak);
+    let ht = '再看十二個月的起伏。';
+    ht += good.length ? `吉月在${good.map(M => FV.MON[M.m - 1] + '月').join('、')}。` : '';
+    ht += bad.length ? `需要留意的是${bad.map(M => FV.MON[M.m - 1] + '月').join('、')}。` : '';
+    if (!good.length && !bad.length) ht += '全年起伏不大，穩紮穩打即可。';
+    if (peak) ht += `應期在${FV.MON[peak.m - 1]}月，流月命宮走到今年引動最強的本命${peak.benName}，事情最容易在這個月發生。`;
+    scenes.push({ type: 'heat', R, text: ht });
+
+    // 4. 重點月份：應期月、最佳月、最需留意月
+    const picks = [];
+    if (peak) picks.push({ M: peak, tag: '應期月' });
+    if (ranked[0] && ranked[0].t >= 2 && !picks.some(p => p.M === ranked[0].M)) picks.push({ M: ranked[0].M, tag: '吉月' });
+    const worst = ranked[ranked.length - 1];
+    if (worst && worst.t <= -2 && !picks.some(p => p.M === worst.M)) picks.push({ M: worst.M, tag: '慎月' });
+    picks.sort((a, b) => a.M.m - b.M.m).forEach(({ M, tag }) => {
+        const ds = M.domains.filter(d => ['財運','事業','感情','健康'].includes(d.label));
+        const act = ds.filter(d => d.level.key !== 'flat');
+        const key = ds.slice().sort((a, b) => Math.abs(b.score) - Math.abs(a.score))[0];
+        let t = `${FV.MON[M.m - 1]}月，${M.gan}${M.zhi}月，流月命宮在${DI_ZHI[M.mingDz]}。`;
+        if (tag === '應期月') {
+            const pk = R.yearS[M.mingDz];
+            const pkEv = pk.events.filter(e => e.text).sort((a, b) => Math.abs(b.v) - Math.abs(a.v))[0];
+            t += `這是今年的應期月，流月命宮走到引動最強的本命${M.benName}${pkEv ? '，' + fvEvSpeech(pkEv.text) : ''}，相關的事最容易在這個月發生。`;
+        }
+        t += act.length ? act.map(d => d.label + d.level.label).join('、') + '。' : (tag === '應期月' ? '' : '各領域平穩。');
+        const ev = key ? fvTopEvent(key) : '';
+        if (key && Math.abs(key.score) >= 1.5 && ev) t += `${key.label}方面，${fvEvSpeech(ev)}。`;
+        if (key && Math.abs(key.score) >= 1.5) {
+            const dom = dominantHua(key.hua.filter(x => x.layer === '流月' || x.layer === '流年'));
+            const sn = dom ? fvStarShort(dom.star, dom.k, key.label) : '';
+            if (sn) t += `${dom.star}化${dom.k}，主${sn.replace(/^主/, '')}。`;
+            t += FLOW_ADVICE[key.label][flowAdviceKey(key.level)];
+        }
+        scenes.push({ type: 'month', R, M, tag, text: t });
+    });
+
+    // 5. 結語
+    const best = R.year.slice().sort((a, b) => b.score - a.score)[0];
+    const weak = R.year.slice().sort((a, b) => a.score - b.score)[0];
+    let out = '總結今年。';
+    if (best && best.score >= 1.5) out += `宜把握${fvLabelSpeech(best.label)}，${FLOW_ADVICE[best.label].pos}`;
+    if (weak && weak.score <= -1.5) out += `需留意${fvLabelSpeech(weak.label)}，${FLOW_ADVICE[weak.label].neg}`;
+    if (!(best && best.score >= 1.5) && !(weak && weak.score <= -1.5)) out += '今年整體平穩，按部就班、累積實力。';
+    out += '以上為依飛星四化推算的參考，祝您流年順利。';
+    scenes.push({ type: 'outro', R, best, weak, text: out });
+
+    // 切句與時間軸
+    let t0 = 0;
+    scenes.forEach(s => {
+        s.sents = fvSplit(s.text).map(text => ({ text, dur: fvSentDur(text) }));
+        s.start = t0;
+        s.dur = s.sents.reduce((a, x) => a + x.dur, 0) + 0.6;
+        let st = t0 + 0.3;
+        s.sents.forEach(x => { x.start = st; st += x.dur; });
+        t0 += s.dur;
+    });
+    return { scenes, total: t0, R, name };
+}
+
+// ---------------- 繪圖工具 ----------------
+function fvWrap(ctx, text, maxW) {
+    const lines = []; let cur = '';
+    for (const ch of text) {
+        if (ctx.measureText(cur + ch).width > maxW && cur) {
+            // 行首避頭點
+            if ('，。、：；！？）」'.includes(ch)) { cur += ch; continue; }
+            lines.push(cur); cur = ch;
+        } else cur += ch;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+}
+function fvRoundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+const fvEase = p => 1 - Math.pow(1 - Math.min(1, Math.max(0, p)), 3);
+
+function fvBackground(ctx, D) {
+    const g = ctx.createLinearGradient(0, 0, 0, FV.H);
+    g.addColorStop(0, FV.C.paper); g.addColorStop(1, FV.C.paper2);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, FV.W, FV.H);
+    // 金框
+    ctx.strokeStyle = FV.C.goldL; ctx.lineWidth = 4; ctx.strokeRect(36, 36, FV.W - 72, FV.H - 72);
+    ctx.strokeStyle = 'rgba(184,134,11,.35)'; ctx.lineWidth = 1.5; ctx.strokeRect(52, 52, FV.W - 104, FV.H - 104);
+    ctx.fillStyle = FV.C.gold; ctx.font = `600 34px ${FV.font}`; ctx.textAlign = 'center';
+    ctx.fillText(`紫微斗數 · ${flowYearNum} ${D.R.yGan}${D.R.yZhi}流年`, FV.W / 2, 118);
+    ctx.fillStyle = FV.C.mute; ctx.font = `26px ${FV.font}`;
+    ctx.fillText('kftseng2oo1.github.io/z1', FV.W / 2, FV.H - 76);
+}
+
+function fvCaption(ctx, text, a) {
+    if (!text) return;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.font = `600 46px ${FV.font}`;
+    const lines = fvWrap(ctx, text, FV.W - 220);
+    const lh = 64, h = lines.length * lh + 56, y = FV.H - 150 - h;
+    ctx.fillStyle = 'rgba(26,16,8,.86)'; fvRoundRect(ctx, 80, y, FV.W - 160, h, 28); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    lines.forEach((l, i) => ctx.fillText(l, FV.W / 2, y + 28 + lh * i + 46));
+    ctx.restore();
+}
+
+function fvTitle(ctx, t, sub, p) {
+    const e = fvEase(p * 2.5);
+    ctx.save(); ctx.globalAlpha = e; ctx.textAlign = 'center';
+    ctx.fillStyle = FV.C.ink; ctx.font = `700 76px ${FV.font}`;
+    ctx.fillText(t, FV.W / 2, 250 - (1 - e) * 30);
+    if (sub) { ctx.fillStyle = FV.C.mute; ctx.font = `34px ${FV.font}`; ctx.fillText(sub, FV.W / 2, 310); }
+    ctx.restore();
+}
+
+// ---------------- 各幕 ----------------
+function fvDrawIntro(ctx, s, p, D) {
+    const e = fvEase(p * 2);
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = e;
+    ctx.fillStyle = FV.C.mute; ctx.font = `40px ${FV.font}`;
+    ctx.fillText(`${s.name} 的流年運勢`, FV.W / 2, 300);
+    ctx.fillStyle = FV.C.ink; ctx.font = `700 210px ${FV.font}`;
+    ctx.fillText(String(flowYearNum), FV.W / 2, 560);
+    ctx.fillStyle = FV.C.red; ctx.font = `700 120px ${FV.font}`;
+    ctx.fillText(`${s.R.yGan}${s.R.yZhi}年`, FV.W / 2, 720);
+    ctx.globalAlpha = 1;
+    // 印章：流年命宮
+    const k = fvEase((p - 0.25) * 3), size = 260 * (0.6 + 0.4 * k);
+    if (k > 0) {
+        ctx.save(); ctx.globalAlpha = k; ctx.translate(FV.W / 2, 980); ctx.rotate(-0.06);
+        ctx.fillStyle = FV.C.red; fvRoundRect(ctx, -size / 2, -size / 2, size, size, 22); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = `700 ${size * 0.42}px ${FV.font}`;
+        ctx.fillText(s.R.yZhi, 0, size * 0.05);
+        ctx.font = `600 ${size * 0.13}px ${FV.font}`; ctx.fillText('流年命宮', 0, size * 0.33);
+        ctx.restore();
+    }
+    const k2 = fvEase((p - 0.5) * 3);
+    if (k2 > 0) {
+        ctx.globalAlpha = k2; ctx.fillStyle = FV.C.ink; ctx.font = `42px ${FV.font}`;
+        ctx.fillText(`主星：${s.mains}`, FV.W / 2, 1210);
+        ctx.globalAlpha = 1;
+    }
+}
+
+function fvDrawOverview(ctx, s, p) {
+    fvTitle(ctx, '全年七大領域', '生年・大限・流年 三層四化引動', p);
+    const top = 400, rowH = 150, cx = 600, half = 250;
+    s.R.year.forEach((d, i) => {
+        const k = fvEase((p - 0.05 - i * 0.06) * 4);
+        if (k <= 0) return;
+        const y = top + i * rowH;
+        ctx.save(); ctx.globalAlpha = k;
+        ctx.textAlign = 'left'; ctx.fillStyle = FV.C.ink; ctx.font = `600 46px ${FV.font}`;
+        ctx.fillText(`${d.icon} ${d.label}`, 110, y + 52);
+        // 中線＋長條
+        ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(cx - half, y + 26, half * 2, 34);
+        ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(cx - 1, y + 14, 2, 58);
+        const w = Math.max(-1, Math.min(1, d.score / 10)) * half * k;
+        ctx.fillStyle = fvLevelColor(d.level.key);
+        ctx.fillRect(w >= 0 ? cx : cx + w, y + 26, Math.abs(w) || 4, 34);
+        ctx.textAlign = 'right'; ctx.fillStyle = fvLevelColor(d.level.key); ctx.font = `700 46px ${FV.font}`;
+        ctx.fillText(d.level.label, 1000, y + 56);
+        ctx.restore();
+    });
+}
+
+function fvDrawHeat(ctx, s, p) {
+    fvTitle(ctx, '十二個月起伏', '財・事・感・健', p);
+    const show = ['財運','事業','感情','健康'];
+    const x0 = 190, y0 = 500, cw = 64, ch = 180, gap = 5;
+    ctx.textAlign = 'center'; ctx.font = `34px ${FV.font}`; ctx.fillStyle = FV.C.mute;
+    s.R.months.forEach((M, j) => {
+        ctx.fillText(['正','二','三','四','五','六','七','八','九','十','冬','臘'][j], x0 + j * (cw + gap) + cw / 2, y0 - 22);
+        if (M.isPeak) { ctx.font = `40px ${FV.font}`; ctx.fillText('🔔', x0 + j * (cw + gap) + cw / 2, y0 - 72); ctx.font = `34px ${FV.font}`; }
+    });
+    show.forEach((lbl, i) => {
+        ctx.textAlign = 'center'; ctx.fillStyle = FV.C.ink; ctx.font = `700 44px ${FV.font}`;
+        ctx.fillText(lbl.slice(0, 1), 130, y0 + i * (ch + gap) + ch / 2 + 15);
+        s.R.months.forEach((M, j) => {
+            const k = fvEase((p * 1.6 - 0.05 - j * 0.035 - i * 0.02) * 6);
+            if (k <= 0) return;
+            const d = M.domains.find(x => x.label === lbl);
+            ctx.save(); ctx.globalAlpha = (d.level.key === 'flat' ? .35 : .95) * k;
+            ctx.fillStyle = fvLevelColor(d.level.key);
+            const hh = ch * (0.5 + 0.5 * k);
+            fvRoundRect(ctx, x0 + j * (cw + gap), y0 + i * (ch + gap) + (ch - hh) / 2, cw, hh, 10); ctx.fill();
+            ctx.restore();
+        });
+    });
+    // 圖例
+    const L = [['大吉','great'],['吉','good'],['平','flat'],['慎','bad'],['凶','worst']];
+    ctx.font = `34px ${FV.font}`; ctx.textAlign = 'left';
+    L.forEach(([t, k], i) => {
+        const x = 210 + i * 150, y = y0 + 4 * (ch + gap) + 60;
+        ctx.globalAlpha = k === 'flat' ? .5 : 1; ctx.fillStyle = fvLevelColor(k); fvRoundRect(ctx, x, y - 28, 34, 34, 6); ctx.fill();
+        ctx.globalAlpha = 1; ctx.fillStyle = FV.C.mute; ctx.fillText(t, x + 46, y);
+    });
+}
+
+function fvDrawMonth(ctx, s, p) {
+    const M = s.M, e = fvEase(p * 2.5);
+    ctx.textAlign = 'center';
+    ctx.save(); ctx.globalAlpha = e;
+    const tagC = s.tag === '慎月' ? FV.C.red : s.tag === '吉月' ? '#1e8449' : FV.C.gold;
+    ctx.fillStyle = tagC; fvRoundRect(ctx, FV.W / 2 - 110, 190, 220, 72, 36); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = `700 40px ${FV.font}`; ctx.fillText(s.tag === '應期月' ? '🔔 應期月' : s.tag, FV.W / 2, 240);
+    ctx.fillStyle = FV.C.ink; ctx.font = `700 150px ${FV.font}`;
+    ctx.fillText(`${FV.MON[M.m - 1]}月`, FV.W / 2, 450 - (1 - e) * 30);
+    ctx.fillStyle = FV.C.mute; ctx.font = `44px ${FV.font}`;
+    ctx.fillText(`${M.gan}${M.zhi}月・流月命宮在${DI_ZHI[M.mingDz]}（本命${M.benName}）`, FV.W / 2, 530);
+    ctx.font = `600 42px ${FV.font}`;
+    ctx.fillStyle = '#1e8449'; ctx.fillText(`月祿 ${M.fly['祿'].star}`, FV.W / 2 - 170, 610);
+    ctx.fillStyle = FV.C.red; ctx.fillText(`月忌 ${M.fly['忌'].star}`, FV.W / 2 + 170, 610);
+    ctx.restore();
+    // 四領域卡片
+    const ds = M.domains.filter(d => ['財運','事業','感情','健康'].includes(d.label));
+    const cw = 420, chh = 270;
+    ds.forEach((d, i) => {
+        const k = fvEase((p - 0.15 - i * 0.07) * 4);
+        if (k <= 0) return;
+        const x = 100 + (i % 2) * (cw + 40), y = 700 + Math.floor(i / 2) * (chh + 40);
+        ctx.save(); ctx.globalAlpha = k; ctx.translate(0, (1 - k) * 40);
+        ctx.fillStyle = '#fffaf0'; fvRoundRect(ctx, x, y, cw, chh, 24); ctx.fill();
+        ctx.strokeStyle = fvLevelColor(d.level.key); ctx.lineWidth = 6; fvRoundRect(ctx, x, y, cw, chh, 24); ctx.stroke();
+        ctx.textAlign = 'center'; ctx.fillStyle = FV.C.ink; ctx.font = `600 44px ${FV.font}`;
+        ctx.fillText(`${d.icon} ${d.label}`, x + cw / 2, y + 90);
+        ctx.fillStyle = fvLevelColor(d.level.key); ctx.font = `700 96px ${FV.font}`;
+        ctx.fillText(d.level.label, x + cw / 2, y + 210);
+        ctx.restore();
+    });
+}
+
+function fvDrawOutro(ctx, s, p) {
+    fvTitle(ctx, '今年行動建議', '', p);
+    const cards = [];
+    if (s.best && s.best.score >= 1.5) cards.push({ h: `宜：把握${fvLabelSpeech(s.best.label)}`, t: FLOW_ADVICE[s.best.label].pos, c: '#1e8449' });
+    if (s.weak && s.weak.score <= -1.5) cards.push({ h: `忌：留意${s.weak.label}`, t: FLOW_ADVICE[s.weak.label].neg, c: FV.C.red });
+    if (!cards.length) cards.push({ h: '平穩之年', t: '按部就班、累積實力，等待下一波機會。', c: FV.C.gold });
+    let y = 400;
+    cards.forEach((cd, i) => {
+        const k = fvEase((p - 0.1 - i * 0.15) * 3);
+        if (k <= 0) return;
+        ctx.save(); ctx.globalAlpha = k;
+        ctx.font = `44px ${FV.font}`;
+        const lines = fvWrap(ctx, cd.t, FV.W - 300);
+        const h = 130 + lines.length * 62;
+        ctx.fillStyle = '#fffaf0'; fvRoundRect(ctx, 100, y, FV.W - 200, h, 28); ctx.fill();
+        ctx.fillStyle = cd.c; ctx.fillRect(100, y, 14, h);
+        ctx.textAlign = 'left'; ctx.fillStyle = cd.c; ctx.font = `700 52px ${FV.font}`; ctx.fillText(cd.h, 150, y + 80);
+        ctx.fillStyle = FV.C.ink; ctx.font = `44px ${FV.font}`;
+        lines.forEach((l, j) => ctx.fillText(l, 150, y + 150 + j * 62));
+        ctx.restore();
+        y += h + 40;
+    });
+    const k = fvEase((p - 0.5) * 3);
+    if (k > 0) {
+        ctx.save(); ctx.globalAlpha = k; ctx.textAlign = 'center';
+        ctx.fillStyle = FV.C.red; ctx.font = `700 64px ${FV.font}`; ctx.fillText('祝 流年順遂', FV.W / 2, Math.max(y + 120, 1180));
+        ctx.restore();
+    }
+}
+
+// 畫一個時間點（秒）
+function fvRenderAt(ctx, D, t, captionOverride) {
+    let s = D.scenes[D.scenes.length - 1];
+    for (const sc of D.scenes) if (t < sc.start + sc.dur) { s = sc; break; }
+    const p = Math.min(1, Math.max(0, (t - s.start) / s.dur));
+    ctx.save();
+    fvBackground(ctx, D);
+    ({ intro: fvDrawIntro, overview: fvDrawOverview, heat: fvDrawHeat, month: fvDrawMonth, outro: fvDrawOutro })[s.type](ctx, s, p, D);
+    ctx.restore();
+    let cap = captionOverride;
+    if (cap === undefined) {
+        const cur = s.sents.find(x => t >= x.start && t < x.start + x.dur);
+        cap = cur ? cur.text : '';
+    }
+    fvCaption(ctx, cap, 1);
+    return s;
+}
+
+// ---------------- 播放器 ----------------
+function fvPickVoice() {
+    const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    return vs.find(v => /zh[-_]TW/i.test(v.lang)) || vs.find(v => /zh[-_]HK/i.test(v.lang)) || vs.find(v => /^zh/i.test(v.lang)) || null;
+}
+
+function openFlowVideo() {
+    if (!chartData) return;
+    let ov = document.getElementById('fvOverlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'fvOverlay';
+        ov.innerHTML = `
+            <div class="fv-box">
+                <canvas id="fvCanvas" width="${FV.W}" height="${FV.H}"></canvas>
+                <div class="fv-bar"><div id="fvProg"></div></div>
+                <div class="fv-ctrl">
+                    <button onclick="fvPrev()">⏮</button>
+                    <button id="fvPlayBtn" onclick="fvToggle()">▶︎ 播放</button>
+                    <button onclick="fvNext()">⏭</button>
+                    <button id="fvVoiceBtn" onclick="fvToggleVoice()">🔊 旁白開</button>
+                </div>
+                <div class="fv-ctrl">
+                    <button onclick="fvRecord()" id="fvRecBtn">⏺ 錄成影片</button>
+                    <button onclick="fvPoster()">🖼 分享圖卡</button>
+                    <button onclick="fvSrt()">📝 字幕檔</button>
+                    <button onclick="fvClose()">✕ 關閉</button>
+                </div>
+                <div id="fvMsg" class="fv-msg"></div>
+            </div>`;
+        document.body.appendChild(ov);
+        if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
+    }
+    ov.style.display = 'flex';
+    const D = fvBuildScenes();
+    FV.state = { D, t: 0, playing: false, voice: !!window.speechSynthesis, raf: 0, last: 0, spokenIdx: -1, waiting: false, recording: false };
+    document.getElementById('fvVoiceBtn').textContent = FV.state.voice ? '🔊 旁白開' : '🔇 無旁白';
+    fvMsg(window.speechSynthesis ? '' : '此瀏覽器不支援語音旁白，播放時只顯示字幕。');
+    // 預覽：顯示開場完成畫面，字幕提示操作
+    const draw = () => fvRenderAt(document.getElementById('fvCanvas').getContext('2d'), D, D.scenes[0].dur * 0.75, '按「▶︎ 播放」開始，或直接分享圖卡');
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(draw);
+    draw();
+}
+
+function fvMsg(t) { const el = document.getElementById('fvMsg'); if (el) el.textContent = t || ''; }
+
+function fvAllSents(D) { return D.scenes.flatMap(s => s.sents); }
+
+function fvLoop(now) {
+    const S = FV.state; if (!S || !S.playing) return;
+    const dt = S.last ? (now - S.last) / 1000 : 0; S.last = now;
+    const sents = fvAllSents(S.D);
+    if (S.voice && !S.recording) {
+        // 旁白模式：每句等語音唸完才往下
+        const idx = sents.findIndex(x => S.t >= x.start && S.t < x.start + x.dur);
+        if (idx >= 0 && idx !== S.spokenIdx) {
+            S.spokenIdx = idx; S.waiting = true;
+            const u = new SpeechSynthesisUtterance(sents[idx].text);
+            u.lang = 'zh-TW'; const v = fvPickVoice(); if (v) u.voice = v; u.rate = 1;
+            const myIdx = idx;
+            u.onend = u.onerror = () => { if (S.spokenIdx === myIdx) { S.waiting = false; S.t = Math.max(S.t, sents[myIdx].start + sents[myIdx].dur); } };
+            speechSynthesis.speak(u);
+            S.sentWall = now;
+        }
+        const cur = sents[S.spokenIdx];
+        // 句子時間用完但還在唸：停住；保險上限 3 倍時長
+        if (S.waiting && cur && S.t + dt >= cur.start + cur.dur - 0.05 && (now - S.sentWall) / 1000 < cur.dur * 3) {
+            S.t = cur.start + cur.dur - 0.05;
+        } else S.t += dt;
+    } else S.t += dt;
+
+    if (S.t >= S.D.total) { S.t = S.D.total; fvRender(); fvStop(true); return; }
+    fvRender();
+    S.raf = requestAnimationFrame(fvLoop);
+}
+function fvRender() {
+    const S = FV.state;
+    fvRenderAt(document.getElementById('fvCanvas').getContext('2d'), S.D, S.t);
+    const pr = document.getElementById('fvProg'); if (pr) pr.style.width = (S.t / S.D.total * 100) + '%';
+}
+function fvToggle() {
+    const S = FV.state; if (!S || S.recording) return;
+    if (S.playing) { fvStop(); return; }
+    if (S.t >= S.D.total) S.t = 0;
+    S.playing = true; S.last = 0; S.spokenIdx = -1;
+    if (window.speechSynthesis) {
+        speechSynthesis.cancel();
+        // iOS：第一次發聲必須在點擊當下觸發，先送空語音解鎖
+        if (S.voice) { try { const u0 = new SpeechSynthesisUtterance(''); u0.lang = 'zh-TW'; speechSynthesis.speak(u0); } catch (e) {} }
+    }
+    document.getElementById('fvPlayBtn').textContent = '⏸ 暫停';
+    S.raf = requestAnimationFrame(fvLoop);
+}
+function fvStop(ended) {
+    const S = FV.state; if (!S) return;
+    S.playing = false; cancelAnimationFrame(S.raf);
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    const b = document.getElementById('fvPlayBtn'); if (b) b.textContent = ended ? '↺ 重播' : '▶︎ 播放';
+}
+function fvJump(dir) {
+    const S = FV.state; if (!S || S.recording) return;
+    const sc = S.D.scenes;
+    let i = sc.findIndex(s => S.t < s.start + s.dur); if (i < 0) i = sc.length - 1;
+    i = Math.max(0, Math.min(sc.length - 1, i + dir));
+    S.t = sc[i].start + 0.01; S.spokenIdx = -1;
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    fvRender();
+}
+function fvPrev() { fvJump(-1); }
+function fvNext() { fvJump(1); }
+function fvToggleVoice() {
+    const S = FV.state; if (!S || !window.speechSynthesis) return;
+    S.voice = !S.voice; if (!S.voice) speechSynthesis.cancel(); S.spokenIdx = -1;
+    document.getElementById('fvVoiceBtn').textContent = S.voice ? '🔊 旁白開' : '🔇 旁白關';
+}
+function fvClose() {
+    fvStop();
+    if (FV.state && FV.state.recorder && FV.state.recorder.state !== 'inactive') FV.state.recorder.stop();
+    const ov = document.getElementById('fvOverlay'); if (ov) ov.style.display = 'none';
+}
+
+// ---------------- 分享／下載 ----------------
+function fvFileName(ext) {
+    const name = document.getElementById('personName')?.value?.trim() || '命主';
+    return `${name}_${flowYearNum}流年.${ext}`;
+}
+async function fvSave(blob, filename, title) {
+    try {
+        const file = new File([blob], filename, { type: blob.type });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title });
+            return 'shared';
+        }
+    } catch (e) {
+        if (e && e.name === 'AbortError') return 'cancel';
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return 'downloaded';
+}
+
+// 分享圖卡（總覽海報）
+function fvDrawPoster(ctx, D) {
+    fvBackground(ctx, D);
+    const R = D.R;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = FV.C.mute; ctx.font = `40px ${FV.font}`; ctx.fillText(`${D.name} 的流年運勢`, FV.W / 2, 200);
+    ctx.fillStyle = FV.C.ink; ctx.font = `700 120px ${FV.font}`; ctx.fillText(`${flowYearNum} ${R.yGan}${R.yZhi}`, FV.W / 2, 340);
+    const fyZhi = getFlowYearZhiIdx(flowYearNum);
+    const mp = palaceByDz(chartData.palaces, fyZhi);
+    ctx.fillStyle = FV.C.red; ctx.font = `600 40px ${FV.font}`;
+    ctx.fillText(`流年命宮在${R.yZhi}（本命${mp ? mp.name : ''}）`, FV.W / 2, 410);
+    // 七領域
+    const top = 480, rowH = 92, cx = 600, half = 240;
+    R.year.forEach((d, i) => {
+        const y = top + i * rowH;
+        ctx.textAlign = 'left'; ctx.fillStyle = FV.C.ink; ctx.font = `600 40px ${FV.font}`;
+        ctx.fillText(`${d.icon} ${d.label}`, 110, y + 44);
+        ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(cx - half, y + 18, half * 2, 30);
+        ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(cx - 1, y + 8, 2, 50);
+        const w = Math.max(-1, Math.min(1, d.score / 10)) * half;
+        ctx.fillStyle = fvLevelColor(d.level.key); ctx.fillRect(w >= 0 ? cx : cx + w, y + 18, Math.abs(w) || 4, 30);
+        ctx.textAlign = 'right'; ctx.font = `700 40px ${FV.font}`; ctx.fillText(d.level.label, 1000, y + 46);
+    });
+    // 熱度格
+    const show = ['財運','事業','感情','健康'], x0 = 190, y0 = 1250, cw = 64, ch = 64, gap = 4;
+    ctx.textAlign = 'center'; ctx.font = `30px ${FV.font}`; ctx.fillStyle = FV.C.mute;
+    R.months.forEach((M, j) => {
+        ctx.fillText(['正','二','三','四','五','六','七','八','九','十','冬','臘'][j], x0 + j * (cw + gap) + cw / 2, y0 - 18);
+        if (M.isPeak) ctx.fillText('🔔', x0 + j * (cw + gap) + cw / 2, y0 - 58);
+    });
+    show.forEach((lbl, i) => {
+        ctx.fillStyle = FV.C.ink; ctx.font = `700 38px ${FV.font}`;
+        ctx.fillText(lbl.slice(0, 1), 130, y0 + i * (ch + gap) + 46);
+        R.months.forEach((M, j) => {
+            const d = M.domains.find(x => x.label === lbl);
+            ctx.globalAlpha = d.level.key === 'flat' ? .35 : .95; ctx.fillStyle = fvLevelColor(d.level.key);
+            fvRoundRect(ctx, x0 + j * (cw + gap), y0 + i * (ch + gap), cw, ch, 8); ctx.fill(); ctx.globalAlpha = 1;
+        });
+    });
+    // 重點月份
+    let y = y0 + 4 * (ch + gap) + 70;
+    ctx.textAlign = 'left';
+    D.scenes.filter(s => s.type === 'month').forEach(s => {
+        const ds = s.M.domains.filter(d => ['財運','事業','感情','健康'].includes(d.label) && d.level.key !== 'flat');
+        ctx.fillStyle = s.tag === '慎月' ? FV.C.red : s.tag === '吉月' ? '#1e8449' : FV.C.gold;
+        ctx.font = `700 40px ${FV.font}`; ctx.fillText(`${s.tag}　${FV.MON[s.M.m - 1]}月`, 110, y);
+        ctx.fillStyle = FV.C.ink; ctx.font = `38px ${FV.font}`;
+        ctx.fillText(ds.length ? ds.map(d => d.label + d.level.label).join('・') : '各領域平穩', 420, y);
+        y += 66;
+    });
+}
+async function fvPoster() {
+    const S = FV.state; if (!S) return;
+    const cv = document.createElement('canvas'); cv.width = FV.W; cv.height = FV.H;
+    fvDrawPoster(cv.getContext('2d'), S.D);
+    fvMsg('正在產生圖卡…');
+    cv.toBlob(async blob => {
+        const r = await fvSave(blob, fvFileName('png'), `${flowYearNum} 流年運勢`);
+        fvMsg(r === 'shared' ? '✅ 已分享圖卡' : r === 'downloaded' ? '✅ 圖卡已下載' : '');
+    }, 'image/png');
+}
+
+// 字幕檔（SRT）
+function fvSrtText(D) {
+    const ts = s => {
+        const ms = Math.round(s * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60,
+              sec = Math.floor(ms / 1000) % 60, r = ms % 1000;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')},${String(r).padStart(3,'0')}`;
+    };
+    return fvAllSents(D).map((x, i) => `${i + 1}\n${ts(x.start)} --> ${ts(x.start + x.dur)}\n${x.text}\n`).join('\n');
+}
+async function fvSrt() {
+    const S = FV.state; if (!S) return;
+    const blob = new Blob(['﻿' + fvSrtText(S.D)], { type: 'text/plain' });
+    const r = await fvSave(blob, fvFileName('srt'), `${flowYearNum} 流年旁白字幕`);
+    fvMsg(r === 'shared' ? '✅ 已分享字幕檔' : r === 'downloaded' ? '✅ 字幕檔已下載（可交給 TTS 工作室配台灣口音旁白）' : '');
+}
+
+// 錄成影片：依時間軸播放、字幕燒入（瀏覽器 TTS 聲音無法錄進檔案）
+function fvRecMime() {
+    if (!window.MediaRecorder) return null;
+    const c = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    return c.find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || null;
+}
+function fvRecord() {
+    const S = FV.state; if (!S) return;
+    if (S.recording) { S.recorder && S.recorder.stop(); return; }
+    const cv = document.getElementById('fvCanvas');
+    const mime = fvRecMime();
+    if (!mime || !cv.captureStream) { fvMsg('此瀏覽器不支援錄影，請改用「分享圖卡」或「字幕檔」。'); return; }
+    fvStop();
+    const stream = cv.captureStream(30);
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = async () => {
+        S.recording = false; cancelAnimationFrame(S.raf);
+        document.getElementById('fvRecBtn').textContent = '⏺ 錄成影片';
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunks, { type: mime.split(';')[0] });
+        if (!blob.size) { fvMsg('錄影失敗，請再試一次。'); return; }
+        fvMsg('影片完成，準備分享…');
+        const r = await fvSave(blob, fvFileName(mime.includes('mp4') ? 'mp4' : 'webm'), `${flowYearNum} 流年運勢動畫`);
+        fvMsg(r === 'shared' ? '✅ 已分享影片' : r === 'downloaded' ? '✅ 影片已下載（字幕已燒入；旁白聲音請另用字幕檔配音）' : '');
+    };
+    S.recording = true; S.recorder = rec; S.t = 0; S.last = 0;
+    document.getElementById('fvRecBtn').textContent = '⏹ 停止錄影';
+    fvMsg('錄影中…請保持此畫面開啟，約 ' + Math.ceil(S.D.total) + ' 秒');
+    rec.start(500);
+    const step = now => {
+        if (!S.recording) return;
+        const dt = S.last ? (now - S.last) / 1000 : 0; S.last = now;
+        S.t += dt;
+        fvRender();
+        if (S.t >= S.D.total + 0.5) { rec.state !== 'inactive' && rec.stop(); return; }
+        S.raf = requestAnimationFrame(step);
+    };
+    S.raf = requestAnimationFrame(step);
+}
 </script>
 </body>
 </html>
