@@ -117,6 +117,20 @@
             background:rgba(30,20,10,0.7); color:#e8dcc8; font-family:"Noto Sans TC",sans-serif; font-size:13px;
         }
         .ctrl-group select:focus, .ctrl-group input:focus { outline:none; border-color:var(--gold); }
+        .fy-group { grid-column: span 2; }
+        .fy-stepper { display:flex; align-items:stretch; gap:6px; }
+        .fy-arrow { flex:0 0 44px; min-height:40px; border:1px solid rgba(184,134,11,0.45); border-radius:6px; background:rgba(30,20,10,0.7);
+                    color:var(--gold-light); font-size:15px; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+        .fy-arrow:active { background:rgba(184,134,11,0.35); }
+        .fy-display { flex:1; display:flex; align-items:center; justify-content:center; gap:8px; border:1px solid rgba(184,134,11,0.3);
+                      border-radius:6px; background:rgba(30,20,10,0.7); color:#e8dcc8; padding:4px 8px; }
+        .fy-display b { font-size:18px; color:#fff3d6; letter-spacing:1px; }
+        .fy-display span { font-size:15px; color:var(--gold-light); font-family:"Noto Serif TC",serif; font-weight:700; }
+        .fy-display small { font-size:11px; color:#a89a80; }
+        .fy-quick { display:flex; gap:6px; margin-top:6px; }
+        .fy-quick button { flex:1; padding:6px 0; border:1px solid rgba(184,134,11,0.3); border-radius:14px; background:transparent; color:#cdbf9f;
+                           font-size:12px; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+        .fy-quick button.on { background:rgba(184,134,11,0.3); color:#fff3d6; border-color:var(--gold); }
         .btn-row { grid-column: 1 / -1; display: flex; gap: 10px; align-items: flex-end; }
         .btn-run {
             padding:9px 30px; background:linear-gradient(135deg,var(--gold) 0%,#8b6914 100%);
@@ -313,6 +327,8 @@
             .layer-tag { font-size:8px; top:24px; left:2px; gap:2px; }
             .layer-tag span { padding:1px 2px; }
             .controls { grid-template-columns:1fr 1fr; }
+            .btn-row { flex-wrap:wrap; }
+            .btn-row .birth-info { flex:1 1 100%; order:3; margin-left:0; }
         }
     </style>
 
@@ -374,9 +390,19 @@
             </select>
         </div>
         <!-- 閏月自動偵測 -->
-        <div class="ctrl-group">
-            <label>流年（西元年）</label>
-            <input type="number" id="flowYear" value="2026" min="1924" max="2100">
+        <div class="ctrl-group fy-group">
+            <label>流年</label>
+            <input type="hidden" id="flowYear" value="2026">
+            <div class="fy-stepper">
+                <button type="button" class="fy-arrow" onclick="fyStep(-1)" aria-label="上一年">◀</button>
+                <div class="fy-display"><b id="fyYear">2026</b><span id="fyGz">丙午</span><small id="fyAge"></small></div>
+                <button type="button" class="fy-arrow" onclick="fyStep(1)" aria-label="下一年">▶</button>
+            </div>
+            <div class="fy-quick">
+                <button type="button" data-off="-1" onclick="fyQuick(-1)">去年</button>
+                <button type="button" data-off="0" onclick="fyQuick(0)">今年</button>
+                <button type="button" data-off="1" onclick="fyQuick(1)">明年</button>
+            </div>
         </div>
         <div class="ctrl-group" style="display:none;">
             <label>飛宮觀測</label>
@@ -3788,6 +3814,27 @@ function initDateSelects() {
     dSel.value = 1;
 }
 
+// ── 流年按鍵選擇 ──
+const FY_MIN = 1924, FY_MAX = 2100;
+function fySet(y) {
+    y = Math.max(FY_MIN, Math.min(FY_MAX, y));
+    document.getElementById('flowYear').value = y;
+    fyUpdateUI();
+    if (chartData) runChart();
+}
+function fyStep(d) { fySet((parseInt(document.getElementById('flowYear').value) || new Date().getFullYear()) + d); }
+function fyQuick(off) { fySet(new Date().getFullYear() + off); }
+function fyUpdateUI() {
+    const y = parseInt(document.getElementById('flowYear')?.value) || new Date().getFullYear();
+    const el = id => document.getElementById(id);
+    if (!el('fyYear')) return;
+    el('fyYear').textContent = y;
+    el('fyGz').textContent = TIAN_GAN[((y - 4) % 10 + 10) % 10] + DI_ZHI[((y - 4) % 12 + 12) % 12];
+    el('fyAge').textContent = (chartData && typeof currentAge === 'number' && currentAge > 0) ? `虛歲${currentAge}` : '';
+    const now = new Date().getFullYear();
+    document.querySelectorAll('.fy-quick button').forEach(b => b.classList.toggle('on', now + parseInt(b.dataset.off) === y));
+}
+
 function runChart() {
     const solarY = parseInt(document.getElementById('solarYear').value);
     const solarM = parseInt(document.getElementById('solarMonth').value);
@@ -3828,6 +3875,7 @@ function runChart() {
     buildFlySelector();
     renderReport();
     updateBirthInfo();
+    fyUpdateUI();
 }
 
 function updateBirthInfo() {
