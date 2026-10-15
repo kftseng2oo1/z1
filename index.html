@@ -180,6 +180,17 @@
         .gan-tag { position:absolute; top:6px; left:6px; font-family:"Noto Serif TC",serif; font-weight:700; color:var(--ink); font-size:12px; opacity:0.7; }
         .p-name { position:absolute; bottom:5px; left:50%; transform:translateX(-50%); font-family:"Noto Serif TC",serif; font-weight:700; font-size:12px; color:var(--ink); background:var(--paper-dark); padding:2px 6px; border-radius:3px; white-space:nowrap; }
         .dz-tag { position:absolute; bottom:6px; left:6px; font-size:10px; color:#aaa; }
+        .layer-tag { position:absolute; top:30px; left:5px; display:flex; flex-direction:column; gap:3px; font-size:10px; line-height:1; pointer-events:none; }
+        .layer-tag span { padding:2px 2px; border-radius:3px; white-space:nowrap; }
+        .layer-tag .lt-dx { color:#8a6d1f; background:rgba(184,134,11,0.12); }
+        .layer-tag .lt-yr { color:#1f5f8b; background:rgba(31,95,139,0.10); }
+        .palace.is-flow-ming .lt-yr { color:#fff; background:#1f5f8b; font-weight:700; }
+        .palace.is-flow-ming { box-shadow:inset 0 0 0 2px rgba(31,95,139,0.55); }
+        .ov-table { width:100%; border-collapse:collapse; font-size:11px; margin:6px 0 10px; }
+        .ov-table th, .ov-table td { border-bottom:1px solid #ece8de; padding:4px 3px; text-align:left; vertical-align:top; }
+        .ov-table th { color:#999; font-weight:400; }
+        .ov-table tr.ov-ming td { background:rgba(31,95,139,0.07); font-weight:700; }
+        .ov-table .ov-hua { white-space:nowrap; }
         .body-tag { position:absolute; top:6px; right:6px; font-size:9px; color:#999; }
 
         .fly-indicators { position:absolute; top:20px; right:6px; display:flex; flex-direction:column; gap:2px; align-items:flex-end; }
@@ -281,6 +292,8 @@
             .star-item { font-size:9px; } .star-item.main { font-size:10px; }
             .sh-tag { font-size:7px; padding:0 2px; }
             .palace { padding:20px 3px 20px 22px; }
+            .layer-tag { font-size:8px; top:24px; left:2px; gap:2px; }
+            .layer-tag span { padding:1px 2px; }
             .controls { grid-template-columns:1fr 1fr; }
         }
     </style>
@@ -3403,7 +3416,7 @@ function calculateChart(lunarYear, lunarMonth, lunarDay, hourIdx, gender, isLeap
         yearGan, yearZhi, mingDzIdx, shenDzIdx,
         mingGan, juNum, palaces,
         ziweiDzIdx, lunarYear: lunarYear,
-        lunarMonth: lunarMonth, hourIdx: hourIdx,
+        lunarMonth: lunarMonth, effectiveMonth: effectiveMonth, hourIdx: hourIdx,
         daxianDir: daxianDir > 0 ? '順行' : '逆行',
         daxianList,
         mainStarsMap: mainStars,
@@ -3425,6 +3438,42 @@ const GRID_ORDER = [5, 6, 7, 8, 4, -1, -2, 9, 3, -3, -4, 10, 2, 1, 0, 11];
 
 function palaceByDz(palaces, dzIdx) {
     return palaces.find(p => p.dzIdx === dzIdx);
+}
+
+// ================================================================
+//  流年／大限／流月 疊宮
+// ================================================================
+const PALACE_SHORT = ['命','兄','夫','子','財','疾','遷','友','官','田','福','父'];
+
+// 以某層命宮地支為起點，求 dzIdx 在該層是第幾宮（0=命宮，逆時針排列）
+function layerPalaceIdx(layerMingDz, dzIdx) {
+    return ((layerMingDz - dzIdx) % 12 + 12) % 12;
+}
+function layerPalaceName(layerMingDz, dzIdx) {
+    return PALACE_NAMES[layerPalaceIdx(layerMingDz, dzIdx)];
+}
+// 流年命宮 = 流年地支所在宮
+function getFlowYearZhiIdx(westernYear) {
+    return ((westernYear - 4) % 12 + 12) % 12;
+}
+// 斗君（流年正月所在宮）：從流年地支宮起正月，逆數至生月，再從該宮起子時順數至生時
+function getDouJunDz(flowZhiIdx, birthMonth, hourIdx) {
+    return ((flowZhiIdx - (birthMonth - 1) + hourIdx) % 12 + 12) % 12;
+}
+// 十二地支的疊宮資料：本命／大限／流年 各是什麼宮
+function buildOverlay(chart, daxian, westernYear) {
+    const fyZhi = getFlowYearZhiIdx(westernYear);
+    const dxMing = daxian ? daxian.dzIdx : null;
+    return DI_ZHI.map((dz, dzIdx) => {
+        const p = palaceByDz(chart.palaces, dzIdx);
+        return {
+            dz, dzIdx, palace: p,
+            ben: p ? p.name : '',
+            dx:  dxMing === null ? '' : layerPalaceName(dxMing, dzIdx),
+            yr:  layerPalaceName(fyZhi, dzIdx),
+            yrIdx: layerPalaceIdx(fyZhi, dzIdx),
+        };
+    });
 }
 
 // ================================================================
@@ -3536,6 +3585,7 @@ window.addEventListener('DOMContentLoaded', renderRecords);
 let selectedFly = '';
 let currentDaxian = null; // { palaceName, gan, startAge, endAge }
 let flowYearGan = '丙';
+let flowYearNum = new Date().getFullYear();
 let currentAge = 0;
 
 function getFlowYearGan(westernYear) {
@@ -3613,6 +3663,7 @@ function runChart() {
 
     // Derive flow year 天干
     flowYearGan = getFlowYearGan(fy);
+    flowYearNum = fy;
 
     // Compute current age (虛歲 = 流年 - 出生農曆年 + 1)
     currentAge = fy - lunar.year + 1;
@@ -3651,7 +3702,7 @@ function updateBirthInfo() {
     document.getElementById('birthInfo').innerHTML =
         `國曆 ${L ? L.solarY : ''}/${L ? L.solarM : ''}/${L ? L.solarD : ''} → 農曆 <b>${lunarStr}</b>　${hr === 12 ? '晚子時（日期算隔日）' : (hr === 0 ? '早子時' : hourNames[hr] + '時')}　｜　` +
         `<b>${d.yearGan}${d.yearZhi}年</b>　${juName}　${d.daxianDir}　｜　` +
-        `流年${flowYearGan}（${fy}）虛歲${currentAge}　｜　` +
+        `流年${flowYearGan}${DI_ZHI[getFlowYearZhiIdx(fy)]}（${fy}）虛歲${currentAge}・流年命宮在${DI_ZHI[getFlowYearZhiIdx(fy)]}（本命${(palaceByDz(d.palaces, getFlowYearZhiIdx(fy)) || {}).name || '?'}）　｜　` +
         `<b style="color:var(--gold-light)">${dxInfo}</b>`;
 }
 
@@ -3692,6 +3743,8 @@ function renderGrid() {
         div.className = 'palace';
         if (palace.isMing) div.classList.add('is-ming');
         if (currentDaxian && palace.name === currentDaxian.palaceName) div.classList.add('is-daxian');
+        const fyZhiIdx = getFlowYearZhiIdx(flowYearNum);
+        if (palace.dzIdx === fyZhiIdx) div.classList.add('is-flow-ming');
         if (hl.source === palace.name) div.classList.add('hl-source');
         if (hl.luTargets.includes(palace.name)) div.classList.add('hl-lu');
         if (hl.jiTargets.includes(palace.name)) div.classList.add('hl-ji');
@@ -3760,7 +3813,10 @@ function renderGrid() {
             div.appendChild(stDiv);
         }
 
-        div.innerHTML += `<div class="dz-tag">${palace.dz}</div><div class="p-name">${palace.name}</div>`;
+        const layerTags = [];
+        if (currentDaxian) layerTags.push(`<span class="lt-dx">限${PALACE_SHORT[layerPalaceIdx(currentDaxian.dzIdx, palace.dzIdx)]}</span>`);
+        layerTags.push(`<span class="lt-yr">年${PALACE_SHORT[layerPalaceIdx(fyZhiIdx, palace.dzIdx)]}</span>`);
+        div.innerHTML += `<div class="layer-tag">${layerTags.join('')}</div><div class="dz-tag">${palace.dz}</div><div class="p-name">${palace.name}</div>`;
         chart.appendChild(div);
     });
 }
@@ -4447,6 +4503,39 @@ const InvestmentAnalyst = {
     }
 };
 
+function buildOverlayHtml(palaces, yGan) {
+    const ov = buildOverlay(chartData, currentDaxian, flowYearNum).sort((a, b) => a.yrIdx - b.yrIdx);
+    const fyZhi = getFlowYearZhiIdx(flowYearNum);
+    const douJun = getDouJunDz(fyZhi, chartData.effectiveMonth || chartData.lunarMonth, chartData.hourIdx);
+    const bSh = SIHUA[chartData.yearGan], ySh = SIHUA[yGan], dSh = currentDaxian ? SIHUA[currentDaxian.gan] : null;
+    const huaTags = (p) => {
+        if (!p) return '';
+        const all = [...p.stars.m, ...p.stars.a];
+        const out = [];
+        for (const k of SH_KEYS) {
+            if (all.includes(bSh[k])) out.push(`<span class="sh-tag sh-${SH_CLS[k]}">生${k}</span>`);
+            if (dSh && all.includes(dSh[k])) out.push(`<span class="sh-tag sh-${SH_CLS[k]}">限${k}</span>`);
+            if (all.includes(ySh[k])) out.push(`<span class="sh-tag sh-${SH_CLS[k]}">流${k}</span>`);
+        }
+        return out.join('');
+    };
+    const mingP = palaceByDz(palaces, fyZhi);
+    let html = `<u>★ 流年命宮與疊宮</u>：<br>`;
+    html += `流年${yGan}${DI_ZHI[fyZhi]}，流年命宮在<b>${DI_ZHI[fyZhi]}宮</b>（疊本命${mingP ? mingP.name : '?'}` +
+            (currentDaxian ? `、大限${layerPalaceName(currentDaxian.dzIdx, fyZhi)}` : '') + `），` +
+            `主星：${mingP && mingP.stars.m.length ? mingP.stars.m.join('、') : '空宮（借對宮）'}。` +
+            `斗君（流年正月）在<b>${DI_ZHI[douJun]}宮</b>。<br>`;
+    html += `<table class="ov-table"><tr><th>流年</th><th>地支</th><th>本命</th>${currentDaxian ? '<th>大限</th>' : ''}<th>主星・四化</th></tr>`;
+    ov.forEach(o => {
+        const stars = o.palace && o.palace.stars.m.length ? o.palace.stars.m.join('') : '—';
+        html += `<tr class="${o.yrIdx === 0 ? 'ov-ming' : ''}"><td>${o.yr}</td><td>${o.dz}</td><td>${o.ben}</td>` +
+                (currentDaxian ? `<td>${o.dx}</td>` : '') +
+                `<td>${stars} <span class="ov-hua">${huaTags(o.palace)}</span></td></tr>`;
+    });
+    html += `</table>`;
+    return html;
+}
+
 function renderReport() {
     document.getElementById('reportArea').style.display = 'block';
     const palaces = chartData.palaces;
@@ -4879,6 +4968,7 @@ function renderReport() {
     let card12 = '';
     if (yGan) {
         const yFly12 = computeFly(palaces, yGan);
+        card12 += buildOverlayHtml(palaces, yGan);
         const YEAR_TARGETS_12 = {
             '財帛宮': {
                 '祿': { desc:'今年賺錢機會增加，吸財力強，適合主動出擊、開拓收入。', guide:'🎯 積極開展——啟動新收入計畫或兼職。獲利後立即轉入實體資產強制「入庫」，防止財氣消散。' },
@@ -4953,13 +5043,11 @@ function renderReport() {
         // 斗君公式：流年地支宮起，逆數生月，順數生時，得斗君宮（正月所在宮位）
         // chartData.lunarMonth = 出生農曆月（1–12），chartData.hourIdx = 時辰索引（0–11）
         {
-            const bMonth  = chartData.lunarMonth || 1;
+            const bMonth  = chartData.effectiveMonth || chartData.lunarMonth || 1;
             const bHour   = chartData.hourIdx    || 0;
-            // 流年地支宮（寅=2為固定起點，各流年地支對應 dzIdx）
-            const YEAR_DZ_IDX = { '子':0,'丑':1,'寅':2,'卯':3,'辰':4,'巳':5,'午':6,'未':7,'申':8,'酉':9,'戌':10,'亥':11 };
-            const flowYearDzIdx = YEAR_DZ_IDX[chartData.yearZhi] ?? 6; // 預設午
-            // 斗君 dzIdx = (流年地支 - 生月 + 生時 + 24) % 12
-            const douGunDzIdx = ((flowYearDzIdx - (bMonth - 1) + bHour) % 12 + 12) % 12;
+            // 斗君：以「流年」地支起正月（之前誤用出生年地支）
+            const flowYearDzIdx = getFlowYearZhiIdx(flowYearNum);
+            const douGunDzIdx = getDouJunDz(flowYearDzIdx, bMonth, bHour);
 
             // 月份名稱對照
             const MON_NAMES = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
@@ -5807,6 +5895,9 @@ ${palaceInfo}
 ${dxInfo}
 
 流年：${fy}年（${fyGan}${fyZhi}年）
+流年命宮：${fyZhi}宮（疊本命${(palaceByDz(palaces, getFlowYearZhiIdx(fy)) || {}).name || '?'}）
+流年十二宮疊宮（流年宮=本命宮${typeof currentDaxian !== 'undefined' && currentDaxian ? '=大限宮' : ''}）：
+${buildOverlay(chartData, (typeof currentDaxian !== 'undefined') ? currentDaxian : null, fy).sort((a, b) => a.yrIdx - b.yrIdx).map(o => `流年${o.yr}=本命${o.ben}${o.dx ? '=大限' + o.dx : ''}（${o.dz}）`).join('；')}
 流年四化：祿=${fySh.祿||'?'} 權=${fySh.權||'?'} 科=${fySh.科||'?'} 忌=${fySh.忌||'?'}
 
 請以古典命理大師口吻回答，繁體中文，論斷精準直接，每次回答控制在300字以內。`;
