@@ -5752,6 +5752,8 @@ function generateExpertReport(palaces, birthGan, daLimitGan, flowYearGan2) {
 // ── AI 紫微大師深度論命 ──
 // ▼ 填入你的 Cloudflare Worker URL（部署後修改此行）
 const ZIWEI_WORKER_URL = 'https://arcar.kftseng2oo1.workers.dev';
+// ▼ AI 模型（模型退役時只要改這一行）
+const AI_MODEL = 'claude-sonnet-5-5';
 
 // ── AI 對話狀態 ──
 let aiChatMessages = [];   // 完整對話歷史（送給 API）
@@ -5811,7 +5813,7 @@ async function callAI(userMsg) {
     const isArtifacts = location.hostname.includes('claude.ai') || location.hostname==='localhost';
     const apiUrl = isArtifacts ? 'https://api.anthropic.com/v1/messages' : ZIWEI_WORKER_URL;
     const body = {
-        model: 'claude-sonnet-4-20250514',
+        model: AI_MODEL,
         max_tokens: 1000,
         system: aiSystemPrompt,
         messages: aiChatMessages,
@@ -5819,7 +5821,13 @@ async function callAI(userMsg) {
     const resp = await fetch(apiUrl, {
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
     });
-    const data = await resp.json();
+    let data = null;
+    try { data = await resp.json(); } catch(_) {}
+    if (!resp.ok || data?.error) {
+        aiChatMessages.pop();   // 失敗的提問不留在歷史，避免下次重複送出
+        const detail = data?.error?.message || data?.error || resp.statusText || '未知錯誤';
+        throw new Error(`HTTP ${resp.status}：${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
+    }
     const reply = data?.content?.[0]?.text || '⚠ 回應異常，請重試。';
     aiChatMessages.push({ role:'assistant', content: reply });
     return reply;
