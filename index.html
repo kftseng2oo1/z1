@@ -283,6 +283,19 @@
         .card.open { box-shadow: 0 6px 24px rgba(0,0,0,0.22); transform: translateY(-1px); }
         .card.conflict { border-left-color: var(--vermillion); }
         .card.health { border-left-color: var(--jade); }
+        .card.personality { border-left-color: var(--vermillion); }
+        .card.personality .card-h { color: var(--vermillion); }
+        .ps-head { font-family:"Noto Serif TC",serif; font-size:15px; font-weight:900; color:#7a1f1f; text-align:center; margin:2px 0 4px; }
+        .ps-sec { font-weight:700; color:#8a6d1f; margin:10px 0 4px; }
+        .ps-row { margin:3px 0; line-height:1.8; }
+        .ps-row b { color:#5a3e1b; }
+        .ps-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0 4px; }
+        .ps-good, .ps-flaw { border-radius:6px; padding:8px 10px; }
+        .ps-good { background:#e9f4ec; } .ps-good b { color:#1e6b3e; }
+        .ps-flaw { background:#f8ecea; } .ps-flaw b { color:#7a1f1f; }
+        .ps-two ul { margin:4px 0 0 16px; padding:0; } .ps-two li { margin:2px 0; line-height:1.6; }
+        .ps-two small { color:#9a8a70; font-size:.85em; }
+        @media(max-width:600px) { .ps-two { grid-template-columns:1fr; } }
         .card.marriage { border-left-color: #e91e8c; }
         .card.children { border-left-color: #ff9800; }
         .card.cause-effect { border-left-color: var(--jade); }
@@ -4855,6 +4868,286 @@ function buildFlowEngineHtml(R) {
     return html;
 }
 
+// 主星廟旺表與宮位主題（與 ZIWEI 共用）
+const MF_BRIGHT = {
+    '紫微': ['平','廟','廟','旺','得','旺','廟','廟','旺','平','得','旺'],
+    '天機': ['廟','陷','得','旺','利','平','廟','陷','得','旺','利','平'],
+    '太陽': ['陷','陷','旺','廟','旺','旺','旺','得','閒','閒','陷','陷'],
+    '武曲': ['旺','廟','得','利','廟','平','旺','廟','得','利','廟','平'],
+    '天同': ['旺','陷','利','平','平','廟','陷','陷','旺','平','平','廟'],
+    '廉貞': ['平','利','廟','平','利','陷','平','利','廟','平','利','陷'],
+    '天府': ['廟','廟','廟','得','廟','得','旺','廟','得','旺','廟','得'],
+    '太陰': ['廟','廟','旺','陷','陷','陷','陷','利','利','旺','旺','廟'],
+    '貪狼': ['旺','廟','平','利','廟','陷','旺','廟','平','利','廟','陷'],
+    '巨門': ['旺','陷','廟','廟','陷','旺','旺','陷','廟','廟','陷','旺'],
+    '天相': ['廟','廟','廟','陷','得','得','廟','得','廟','陷','得','得'],
+    '天梁': ['廟','旺','廟','廟','旺','陷','廟','旺','陷','得','旺','陷'],
+    '七殺': ['旺','廟','廟','陷','旺','平','旺','廟','廟','陷','廟','平'],
+    '破軍': ['廟','旺','得','陷','旺','平','廟','旺','得','陷','旺','平'],
+};
+function mfBrightLevel(word) {
+    if (word === '廟' || word === '旺') return 1;
+    if (word === '陷' || word === '閒') return -1;
+    return 0;
+}
+const MF_DOMAIN = {
+    '命宮':   { theme: '自身狀態與個人抉擇', up: '適合為自己設定新目標、展開新計畫。', down: '凡事保守，避免意氣用事與重大轉換。' },
+    '兄弟宮': { theme: '手足、同儕與現金流', up: '可與同事、手足合作，資金周轉順暢。', down: '勿替人作保或借錢，同儕間易有摩擦。' },
+    '夫妻宮': { theme: '感情、配偶與合夥', up: '感情升溫，適合約會、旅行或確認合作關係。', down: '多傾聽少爭辯，合夥協議宜白紙黑字。' },
+    '子女宮': { theme: '子女、部屬與創作投資', up: '利於帶人、教學、創作，與子女互動佳。', down: '注意子女與部屬狀況，勿做高風險投資。' },
+    '財帛宮': { theme: '收入與理財', up: '把握進財機會，可收款、議價、增加收入來源。', down: '嚴控支出、勿投機，守住現金為上。' },
+    '疾厄宮': { theme: '健康與身心狀態', up: '體能尚佳，適合安排健檢、養成運動習慣。', down: '作息規律、避免過勞，身體不適及早就醫。' },
+    '遷移宮': { theme: '外出、交際與外部環境', up: '宜外出拓展、出差旅行，在外得助。', down: '出行注意交通安全，對外合作多加確認。' },
+    '交友宮': { theme: '朋友、人脈與客戶', up: '人脈帶來機會，適合社交、拓展客源。', down: '慎防小人與人情債，借貸往來宜避免。' },
+    '官祿宮': { theme: '事業與工作表現', up: '工作能見度高，適合爭取升遷、推動計畫。', down: '工作壓力大，先求穩定，勿輕率換工作。' },
+    '田宅宮': { theme: '家庭、居家與不動產', up: '適合整理居家、看屋簽約或家族聚會。', down: '房產交易與修繕延後，注意家中漏水電器。' },
+    '福德宮': { theme: '精神、心情與享受', up: '心情愉快，適合休閒、充電、培養興趣。', down: '情緒易起伏、睡眠欠佳，避免衝動消費。' },
+    '父母宮': { theme: '長輩、上司與文書', up: '得長輩上司提攜，文書契約辦理順利。', down: '多關心長輩健康，與上司溝通宜委婉，文件仔細核對。' },
+};
+
+// ================================================================
+//  ★ 人格全方位分析（命・遷・財・官・福德・身宮；廟旺・輔煞・四化・格局・飛星心性）
+// ================================================================
+const PS_DIMS = ['領導', '智謀', '穩定', '人緣', '感性', '行動'];
+// 十四主星：六維基準（0–10）、關鍵詞、優點、盲點、廟旺／落陷時的變化
+const PS_STAR = {
+    '紫微': { d: [9,6,7,5,4,6], k: '帝王氣度', good: '有主見、能統御、氣度大', flaw: '好面子、耳根軟、不喜受制於人', hi: '尊貴有威信，能服眾', lo: '孤君自負、眼高手低' },
+    '天機': { d: [4,9,4,6,6,6], k: '機智善謀', good: '反應快、善於企劃分析', flaw: '想太多、定性不足', hi: '謀略精準、應變一流', lo: '多慮浮動、聰明反被聰明誤' },
+    '太陽': { d: [7,5,5,8,5,8], k: '熱情外放', good: '光明磊落、樂於付出', flaw: '愛面子、付出多回收少', hi: '名聲貴氣、受人敬重', lo: '勞而少功、外熱內虛' },
+    '武曲': { d: [7,5,7,3,3,8], k: '剛毅務實', good: '果決務實、理財能力強', flaw: '剛硬少圓融、不輕易妥協', hi: '財權在握、執行力強', lo: '固執勞碌、財來財去' },
+    '天同': { d: [3,5,6,8,7,3], k: '溫和知足', good: '隨和好相處、善於調和', flaw: '鬥志不足、容易安逸', hi: '福氣自來、人生較順', lo: '懶散多煩、偏享受型' },
+    '廉貞': { d: [6,6,5,6,7,7], k: '熱情執著', good: '有才藝、做事俐落、敢愛敢恨', flaw: '好勝倔強、愛恨執著', hi: '正派有原則、自律', lo: '衝動惹是非、作繭自縛' },
+    '天府': { d: [7,6,9,7,4,4], k: '穩重包容', good: '大器包容、善守成管理', flaw: '保守、不愛冒險', hi: '財庫豐盈、能撐大局', lo: '空庫虛名、優柔寡斷' },
+    '太陰': { d: [3,6,6,6,9,3], k: '溫柔細膩', good: '細心體貼、富美感', flaw: '情緒內藏、多愁善感', hi: '溫婉有福、善積蓄', lo: '憂慮多思、情緒起伏' },
+    '貪狼': { d: [5,6,3,9,7,7], k: '多才交際', good: '魅力強、多才多藝、交遊廣', flaw: '慾望多、難以專一', hi: '才華得展、交際得利', lo: '貪多嚼不爛、流於享樂' },
+    '巨門': { d: [4,8,4,4,5,5], k: '口才分析', good: '分析力強、口才好、追根究柢', flaw: '疑心重、易招口舌', hi: '言之有物、以口為業', lo: '是非纏身、牢騷多' },
+    '天相': { d: [5,6,7,8,5,5], k: '正直協調', good: '厚道公正、善於協調服務', flaw: '依附性強、受環境左右', hi: '印星掌權、受信任', lo: '隨波逐流、缺乏主見' },
+    '天梁': { d: [7,7,7,6,4,4], k: '老成護蔭', good: '有正義感、樂於照顧人', flaw: '好為人師、清高孤傲', hi: '逢凶化吉、德望高', lo: '愛管閒事、孤僻' },
+    '七殺': { d: [8,5,3,3,3,10], k: '剛猛開創', good: '果敢有魄力、能開疆闢土', flaw: '性急衝動、孤剋', hi: '將星得地、能成大功', lo: '有勇無謀、起伏大' },
+    '破軍': { d: [6,5,2,5,5,10], k: '求新求變', good: '敢衝敢破、勇於創新', flaw: '衝動善變、消耗大', hi: '破後能立、東山再起', lo: '破而難立、反覆折騰' },
+};
+// 輔星、煞星對六維的修正與描述
+const PS_AUX = {
+    '左輔': { d: [0,0,1,2,0,0], t: '得助力、善協調', good: true },
+    '右弼': { d: [0,0,1,2,0,0], t: '得助力、善協調', good: true },
+    '文昌': { d: [0,2,0,0,1,0], t: '斯文重才學', good: true },
+    '文曲': { d: [0,1,0,1,2,0], t: '有才藝、口才佳', good: true },
+    '天魁': { d: [1,0,0,1,0,0], t: '貴人多、氣質端正', good: true },
+    '天鉞': { d: [1,0,0,1,0,0], t: '貴人多、氣質端正', good: true },
+    '祿存': { d: [0,0,2,-1,0,0], t: '謹慎重積蓄、較保守', good: true },
+    '天馬': { d: [0,0,-1,0,0,2], t: '好動、閒不下來', good: true },
+    '擎羊': { d: [1,0,-1,-2,0,2], t: '剛烈直接、好勝', good: false },
+    '陀羅': { d: [0,0,-1,-1,1,-1], t: '拖延糾結、暗中較勁', good: false },
+    '火星': { d: [0,0,-2,-1,0,2], t: '性急、情緒易爆發', good: false },
+    '鈴星': { d: [0,0,-2,-1,1,0], t: '悶燒、情緒壓抑', good: false },
+    '地空': { d: [0,1,-2,0,1,0], t: '想法特殊、不按常理', good: false },
+    '地劫': { d: [0,1,-2,0,0,0], t: '理想化、起落較大', good: false },
+};
+const PS_HUA = {   // 生年四化在命宮主星
+    '祿': { d: [0,0,0,1,0.5,0], t: '人緣與福氣加分，性情圓融' },
+    '權': { d: [1.5,0,0,0,0,1], t: '主導欲強、能擔責任' },
+    '科': { d: [0,1,0.5,0,0,0], t: '重形象、講道理、有條理' },
+    '忌': { d: [0,0,-1.5,0,1,0], t: '執著、放不下，對自己要求高' },
+};
+const PS_PATTERN = {
+    '殺破狼':   { name: '開創型', stars: ['七殺','破軍','貪狼'], t: '敢衝敢變，喜歡開疆闢土，人生起伏較大', job: '創業、業務、開拓新市場、專案攻堅', relate: '給他空間和明確目標，不要管得太細' },
+    '機月同梁': { name: '幕僚型', stars: ['天機','太陰','天同','天梁'], t: '重安穩，善規劃與服務，做事細膩', job: '公職、專業技術、企劃、教育、服務業', relate: '給安全感，肯定他的細心與付出' },
+    '紫府廉武相': { name: '管理型', stars: ['紫微','天府','廉貞','武曲','天相'], t: '重權責與實利，善組織與掌控資源', job: '管理、財務、行政、經營', relate: '尊重他的主導權，溝通講重點、講實際' },
+    '巨日':     { name: '傳播型', stars: ['巨門','太陽'], t: '以口才與名聲立足，熱心表達', job: '教育、法律、傳播、顧問、業務', relate: '坦白直接，避免讓他起疑' },
+};
+const PS_GOOD = { 領導: '具統御與決策力', 智謀: '思考縝密、善於謀劃', 穩定: '穩健可靠、能守成', 人緣: '人緣佳、善交際協調', 感性: '感受力強、富同理心與美感', 行動: '行動力強、說做就做' };
+const PS_WEAK = { 領導: '不愛出頭，需要有人推一把', 智謀: '多憑直覺，重要決定宜多做功課', 穩定: '情緒或計畫容易變動，需要規律', 人緣: '較獨立、少圓融，宜多經營關係', 感性: '偏理性務實，容易忽略他人感受', 行動: '想得多做得慢，宜給自己設期限' };
+const PS_FIX = {   // 命宮干化忌入某宮：一生的執著點
+    '命宮': '執著自我，凡事一肩扛', '兄弟宮': '在意手足同儕，也在意現金週轉', '夫妻宮': '執著感情與伴侶',
+    '子女宮': '牽掛子女、部屬或投資', '財帛宮': '對金錢有不安全感，看重收入', '疾厄宮': '在意身體，容易內耗操勞',
+    '遷移宮': '在意外界眼光，心常向外求', '交友宮': '重朋友義氣，容易為人所累', '官祿宮': '執著事業成就，容易成為工作狂',
+    '田宅宮': '戀家念舊，執著家庭與置產', '福德宮': '想法多，精神容易內耗', '父母宮': '在意長輩上司的評價，重名分與文書',
+};
+const PS_SELF = { 祿: '命宮自化祿：大方隨和、不計較，但好處也容易守不住', 權: '命宮自化權：自我要求高、好強，不服輸',
+                  科: '命宮自化科：重形象、講道理，遇事先求體面', 忌: '命宮自化忌：容易鑽牛角尖、自我否定，宜學會放過自己' };
+
+function psBright(star, dz) {
+    const w = (typeof MF_BRIGHT !== 'undefined' && MF_BRIGHT[star]) ? MF_BRIGHT[star][dz] : '';
+    return { w, lv: w ? mfBrightLevel(w) : 0 };
+}
+// 某宮的主星（空宮借對宮）
+function psMains(palaces, p) {
+    if (p.stars.m.length) return { stars: p.stars.m, dz: p.dzIdx, borrowed: false };
+    const opp = palaceByDz(palaces, (p.dzIdx + 6) % 12);
+    return { stars: opp ? opp.stars.m : [], dz: opp ? opp.dzIdx : p.dzIdx, borrowed: true };
+}
+function psKeyword(palaces, p) {
+    const M = psMains(palaces, p);
+    if (!M.stars.length) return '（無主星）';
+    return (M.borrowed ? '借' : '') + M.stars.map(s => {
+        const b = psBright(s, M.dz);
+        return s + (b.w ? `(${b.w})` : '') + (PS_STAR[s] ? '・' + PS_STAR[s].k : '');
+    }).join('、');
+}
+
+function analyzePersonality() {
+    if (!chartData) return null;
+    const P = chartData.palaces;
+    const byName = n => P.find(p => p.name === n);
+    const ming = byName('命宮'), qian = byName('遷移宮'), cai = byName('財帛宮'), guan = byName('官祿宮'), fu = byName('福德宮');
+    const shen = P.find(p => p.isShen) || ming;
+    const sameShen = shen === ming;
+    const bSh = SIHUA[chartData.yearGan];
+
+    // ── 六維：主星加權平均 ──
+    const sum = [0,0,0,0,0,0]; let wsum = 0;
+    const basis = { good: [], flaw: [] };
+    const addPalace = (p, w, label) => {
+        const M = psMains(P, p);
+        const ww = M.borrowed ? w * 0.7 : w;
+        M.stars.forEach(s => {
+            const st = PS_STAR[s]; if (!st) return;
+            const b = psBright(s, M.dz);
+            const d = st.d.slice();
+            if (b.lv > 0) { d[0] += 0.5; d[2] += 0.5; }
+            if (b.lv < 0) { d[0] -= 1; d[2] -= 1; }
+            d.forEach((v, i) => sum[i] += v * ww / M.stars.length);
+            if (label === '命') {
+                basis.good.push({ t: st.good + (b.lv > 0 ? `，${st.hi}` : ''), why: `${s}${b.w ? b.w : ''}坐命` });
+                basis.flaw.push({ t: st.flaw + (b.lv < 0 ? `，${st.lo}` : ''), why: `${s}${b.w ? b.w : ''}坐命` });
+            }
+        });
+        if (M.stars.length) wsum += ww;
+    };
+    addPalace(ming, sameShen ? 1.3 : 1.0, '命');
+    addPalace(qian, 0.5); addPalace(cai, 0.35); addPalace(guan, 0.35); addPalace(fu, 0.6);
+    if (!sameShen) addPalace(shen, 0.6);
+    const base = sum.map(v => wsum ? v / wsum : 5);
+
+    // ── 修正：輔煞（命 1、福德與身 0.5）、生年四化 ──
+    const mod = [0,0,0,0,0,0];
+    const auxNotes = [];
+    [[ming, 1, '命'], [fu, 0.5, '福德'], ...(sameShen ? [] : [[shen, 0.5, '身']])].forEach(([p, f, lab]) => {
+        [...p.stars.a, ...p.stars.b].forEach(s => {
+            const a = PS_AUX[s]; if (!a) return;
+            a.d.forEach((v, i) => mod[i] += v * f);
+            if (lab === '命') {
+                auxNotes.push({ star: s, t: a.t, good: a.good });
+                (a.good ? basis.good : basis.flaw).push({ t: a.t, why: `${s}在命` });
+            } else if (!a.good) {
+                basis.flaw.push({ t: a.t, why: lab === '福德' ? `內心：${s}在福德` : `後天：${s}在身宮` });
+            }
+        });
+    });
+    const mingHua = [];
+    [...ming.stars.m, ...ming.stars.a].forEach(s => SH_KEYS.forEach(k => {
+        if (bSh[k] === s) { mingHua.push({ star: s, k }); PS_HUA[k].d.forEach((v, i) => mod[i] += v); }
+    }));
+    const dims = base.map((v, i) => Math.max(5, Math.min(98, Math.round(v * 10 + mod[i] * 4))));
+
+    // ── 格局分型（命宮三方四正主星） ──
+    const sf = [ming, qian, cai, guan].flatMap(p => psMains(P, p).stars);
+    const mingStars = psMains(P, ming).stars;
+    let pattern = null, best = -1;
+    Object.entries(PS_PATTERN).forEach(([key, pt]) => {
+        const c = sf.filter(s => pt.stars.includes(s)).length + mingStars.filter(s => pt.stars.includes(s)).length * 2;
+        if (c > best) { best = c; pattern = { key, ...pt }; }
+    });
+
+    // ── 飛星心性 ──
+    const mFly = computeFly(P, ming.gan);
+    const fixP = mFly && mFly['忌'] ? mFly['忌'].targetPalace : '';
+    const luP  = mFly && mFly['祿'] ? mFly['祿'].targetPalace : '';
+    let laiyin = P.filter(p => p.gan === chartData.yearGan);
+    if (laiyin.length > 1) laiyin = laiyin.filter(p => p.dzIdx !== 0 && p.dzIdx !== 1);
+    laiyin = laiyin[0] || null;
+    const selfT = detectSelfTrans(ming);
+
+    // ── 優勢與盲點（六維補充） ──
+    const order = dims.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
+    const topDims = order.slice(0, 2).map(x => PS_DIMS[x[1]]);
+    const lowDims = order.slice(-2).map(x => PS_DIMS[x[1]]).filter((d, j) => order.slice(-2)[j][0] < 55);
+    topDims.forEach(d => basis.good.push({ t: PS_GOOD[d], why: `六維${d}突出` }));
+    lowDims.forEach(d => basis.flaw.push({ t: PS_WEAK[d], why: `六維${d}偏低` }));
+    mingHua.forEach(h => (h.k === '忌' ? basis.flaw : basis.good).push({ t: PS_HUA[h.k].t, why: `生年${h.star}化${h.k}在命` }));
+    selfT.forEach(s => (s.type === '忌' ? basis.flaw : basis.good).push({ t: PS_SELF[s.type].split('：')[1], why: `命宮${s.star}自化${s.type}` }));
+
+    const mainKey = mingStars.length ? mingStars.map(s => PS_STAR[s] ? PS_STAR[s].k : s).join('、') : '性格隨環境變化';
+    const headline = `${pattern ? pattern.name : ''}・${mainKey}${fixP ? `・執著在${fixP.replace('宮', '')}` : ''}`;
+
+    return { ming, qian, cai, guan, fu, shen, sameShen, dims, pattern, fixP, luP, laiyin, selfT, mingHua, auxNotes,
+             good: basis.good.slice(0, 6), flaw: basis.flaw.slice(0, 6), topDims, lowDims, headline };
+}
+
+// 六維雷達圖（SVG）
+function psRadarSvg(dims) {
+    const N = 6, R = 78, cx = 110, cy = 106;
+    const pt = (i, r) => { const a = -Math.PI / 2 + i * 2 * Math.PI / N; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+    let g = '';
+    [0.25, 0.5, 0.75, 1].forEach(f => {
+        g += `<polygon points="${Array.from({ length: N }, (_, i) => pt(i, R * f).join(',')).join(' ')}" fill="none" stroke="#d8ccb0" stroke-width="${f === 1 ? 1.2 : 0.6}"/>`;
+    });
+    for (let i = 0; i < N; i++) { const [x, y] = pt(i, R); g += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#e2d8c2" stroke-width="0.6"/>`; }
+    const poly = dims.map((v, i) => pt(i, R * v / 100).join(',')).join(' ');
+    g += `<polygon points="${poly}" fill="rgba(192,57,43,0.18)" stroke="#c0392b" stroke-width="1.6"/>`;
+    dims.forEach((v, i) => { const [x, y] = pt(i, R * v / 100); g += `<circle cx="${x}" cy="${y}" r="2.6" fill="#c0392b"/>`; });
+    PS_DIMS.forEach((d, i) => {
+        const [x, y] = pt(i, R + 16);
+        g += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="11" fill="#5a4630" font-weight="700">${d}</text>` +
+             `<text x="${x}" y="${y + 16}" text-anchor="middle" font-size="9" fill="#a08c6a">${dims[i]}</text>`;
+    });
+    return `<svg viewBox="0 0 220 228" width="100%" style="max-width:300px;display:block;margin:4px auto 8px;">${g}</svg>`;
+}
+
+function buildPersonalityCard() {
+    const A = analyzePersonality();
+    if (!A) return '';
+    const P = chartData.palaces;
+    const dom = n => (typeof MF_DOMAIN !== 'undefined' && MF_DOMAIN[n]) ? MF_DOMAIN[n].theme : n.replace('宮', '');
+    const auxStr = p => [...p.stars.a, ...p.stars.b].filter(s => PS_AUX[s]).map(s => `${s}（${PS_AUX[s].t}）`).join('、');
+    let h = `<div class="ps-head">${A.headline}</div>`;
+    h += psRadarSvg(A.dims);
+    if (A.pattern) h += `<div class="ps-sec">◆ 格局基調：${A.pattern.key}（${A.pattern.name}）</div><div>${A.pattern.t}。</div>`;
+
+    h += `<div class="ps-sec">◆ 三層人格</div>`;
+    h += `<div class="ps-row"><b>外顯</b>（命宮・${A.ming.dz}）：${psKeyword(P, A.ming)}${auxStr(A.ming) ? '；' + auxStr(A.ming) : ''}</div>`;
+    h += `<div class="ps-row"><b>在外</b>（遷移）：${psKeyword(P, A.qian)}</div>`;
+    h += `<div class="ps-row"><b>內心</b>（福德・${A.fu.dz}）：${psKeyword(P, A.fu)}${auxStr(A.fu) ? '；' + auxStr(A.fu) : ''}</div>`;
+    h += A.sameShen
+        ? `<div class="ps-row"><b>後天</b>：身命同宮，表裡一致，個性到中年後更鮮明。</div>`
+        : `<div class="ps-row"><b>後天</b>（身宮在${A.shen.name}・${A.shen.dz}）：中年後重心轉向「${dom(A.shen.name)}」；${psKeyword(P, A.shen)}</div>`;
+    h += `<div class="ps-row"><b>金錢觀</b>（財帛）：${psKeyword(P, A.cai)}</div>`;
+    h += `<div class="ps-row"><b>做事方式</b>（官祿）：${psKeyword(P, A.guan)}</div>`;
+
+    h += `<div class="ps-two"><div class="ps-good"><b>✅ 優勢</b><ul>${A.good.map(x => `<li>${x.t}<small>（${x.why}）</small></li>`).join('')}</ul></div>` +
+         `<div class="ps-flaw"><b>⚠ 盲點</b><ul>${A.flaw.map(x => `<li>${x.t}<small>（${x.why}）</small></li>`).join('')}</ul></div></div>`;
+
+    h += `<div class="ps-sec">◆ 飛星心性</div>`;
+    if (A.fixP) h += `<div class="ps-row"><b>執著點</b>：命宮${A.ming.gan}干化忌入${A.fixP}──${PS_FIX[A.fixP] || ''}。</div>`;
+    if (A.luP) h += `<div class="ps-row"><b>緣分所在</b>：命宮化祿入${A.luP}──對「${dom(A.luP)}」有緣，也是喜好與付出所在。</div>`;
+    if (A.laiyin) h += `<div class="ps-row"><b>來因宮</b>：${A.laiyin.name}（${A.laiyin.gan}${A.laiyin.dz}）──一生的動機與課題圍繞「${dom(A.laiyin.name)}」。</div>`;
+    A.selfT.forEach(s => { h += `<div class="ps-row">${PS_SELF[s.type]}。</div>`; });
+    A.mingHua.forEach(x => { h += `<div class="ps-row">生年${x.star}化${x.k}在命：${PS_HUA[x.k].t}。</div>`; });
+
+    if (A.pattern) {
+        h += `<div class="ps-sec">◆ 發展與相處</div>`;
+        h += `<div class="ps-row"><b>適合方向</b>：${A.pattern.job}；發揮${A.topDims.join('、')}的長處。</div>`;
+        h += `<div class="ps-row"><b>相處之道</b>：${A.pattern.relate}。</div>`;
+    }
+    return h;
+}
+
+// 給 AI 的人格摘要
+function buildPersonalityAIText() {
+    const A = analyzePersonality();
+    if (!A) return '';
+    const P = chartData.palaces;
+    return `【系統人格分析】${A.headline}\n` +
+        `六維：${PS_DIMS.map((d, i) => d + A.dims[i]).join(' ')}\n` +
+        (A.pattern ? `格局：${A.pattern.key}（${A.pattern.name}）\n` : '') +
+        `外顯（命）：${psKeyword(P, A.ming)}；在外（遷）：${psKeyword(P, A.qian)}；內心（福德）：${psKeyword(P, A.fu)}；` +
+        (A.sameShen ? '身命同宮\n' : `身宮在${A.shen.name}：${psKeyword(P, A.shen)}\n`) +
+        `命宮輔煞：${[...A.ming.stars.a, ...A.ming.stars.b].join('、') || '無'}\n` +
+        `優勢：${A.good.map(x => x.t).join('；')}\n盲點：${A.flaw.map(x => x.t).join('；')}\n` +
+        `命忌入${A.fixP || '?'}（執著點）；命祿入${A.luP || '?'}；來因宮${A.laiyin ? A.laiyin.name : '?'}` +
+        (A.selfT.length ? `；命宮自化${A.selfT.map(s => s.type).join('、')}` : '');
+}
+
 function renderReport() {
     document.getElementById('reportArea').style.display = 'block';
     const palaces = chartData.palaces;
@@ -5393,7 +5686,10 @@ function renderReport() {
     summaryBox.innerHTML = summaryHtml;
     summaryBox.style.display = 'block';
 
+    let cardP = '';
+    try { cardP = buildPersonalityCard(); } catch (e) { console.warn('personality', e); }
     const cards = [
+        { h: '★ 人格全方位分析', c: cardP, note: '綜合命宮三方四正、福德（內心）、身宮（後天）主星與廟旺，命宮輔煞、生年四化，格局分型與命宮飛化（執著點、緣分、來因宮）。六維分數為規則化參考。', cls: 'personality' },
         { h: '一、命格星性與三層體用出', c: card1, note: '體＝生年（先天本質），用＝大限（十年走向），出＝流年（當年觸發）。' },
         { h: '二、財帛理財分析', c: card2, note: '三層忌同入一宮為「疊忌」，壓力最大。祿為進財方向。' },
         { h: '三、事業職涯走勢', c: card3, note: '大限權星定十年事業方向，流年權定今年施力處。' },
@@ -5408,8 +5704,9 @@ function renderReport() {
         { h: `十二、📅 流年運勢診斷（${flowYearGan}干流年）`, c: card12, note: '流年四化落宮行動綱要：依曾氏「祿=積極開展、權=果斷執行、科=貴人解厄、忌=避凶守成」四象論斷，轉化為具體財運行動指引。' },
     ];
 
-    document.getElementById('reportGrid').innerHTML = cards.map((d, i) => {
-        let cls = 'card';
+    document.getElementById('reportGrid').innerHTML = cards.map((d, k) => {
+        let cls = 'card' + (d.cls ? ' ' + d.cls : '');
+        const i = k - 1;   // 人格卡插在最前，其餘卡片沿用原本序號
         if (i === 3)  cls += ' health';
         if (i === 4)  cls += ' marriage children';
         if (i === 8)  cls += ' cause-effect';
@@ -6151,6 +6448,7 @@ ${buildOverlay(chartData, (typeof currentDaxian !== 'undefined') ? currentDaxian
 ${buildFlowAIText(chartData, (typeof currentDaxian !== 'undefined') ? currentDaxian : null, fy)}
 
 論流年、流月時，請以上方「系統引動評分」為骨架（領域吉凶、疊忌疊祿、應期月），再結合宮內主星與化曜星性細論，並指出具體月份；不要與評分結論矛盾，若有不同看法請說明理由。
+${(() => { try { return '\n' + buildPersonalityAIText() + '\n論命格、性格時，請以上方「系統人格分析」為骨架，結合主星廟旺、輔煞與飛化細論，並說明依據。\n'; } catch (e) { return ''; } })()}
 請以古典命理大師口吻回答，繁體中文，論斷精準直接，每次回答控制在300字以內。`;
 }
 
@@ -6216,7 +6514,7 @@ async function runAIMaster() {
     aiChatMessages = [];
     document.getElementById('aiChatHistory').innerHTML = '';
 
-    const firstQ = '請為我進行完整的紫微斗數論命，依序分析：命格總論、財運格局、事業職涯、感情婚姻、本大限重點、流年提示，最後給出3條具體行動建議；流年部分請點出吉月、慎月與應期月。';
+    const firstQ = '請為我進行完整的紫微斗數論命，依序分析：命格總論與人格特質（外顯、內心、優勢盲點）、財運格局、事業職涯、感情婚姻、本大限重點、流年提示，最後給出3條具體行動建議；流年部分請點出吉月、慎月與應期月。';
     const loading = addLoading();
     try {
         const reply = await callAI(firstQ);
