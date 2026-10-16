@@ -118,6 +118,37 @@
         }
         .ctrl-group select:focus, .ctrl-group input:focus { outline:none; border-color:var(--gold); }
         .fy-group { grid-column: span 2; }
+        .rect-btn { margin-top:6px; width:100%; padding:6px 0; border-radius:14px; border:1px dashed rgba(212,168,67,.6); background:transparent; color:#e6c77a; font-size:12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+        #rectOverlay { position:fixed; inset:0; z-index:9998; background:rgba(10,6,2,.9); display:none; align-items:flex-start; justify-content:center; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 10px; padding-top:max(14px, env(safe-area-inset-top)); }
+        .rect-box { width:100%; max-width:560px; background:#1e150d; border:1px solid rgba(212,168,67,.45); border-radius:12px; padding:14px; color:#e8dcc8; font-size:13px; line-height:1.6; margin-bottom:40px; }
+        .rect-head { display:flex; justify-content:space-between; align-items:center; font-size:17px; color:#f0d090; font-family:"Noto Serif TC",serif; }
+        .rect-x { background:none; border:none; color:#c9b991; font-size:20px; cursor:pointer; }
+        .rect-note { color:#a89a80; font-size:12px; margin:4px 0 8px; }
+        .rect-sec { color:#e6c77a; font-weight:700; margin:12px 0 6px; } .rect-sec small { color:#968a6e; font-weight:400; margin-left:4px; }
+        .rect-hours { display:grid; grid-template-columns:repeat(6,1fr); gap:5px; }
+        .rect-hours button { padding:5px 0; border-radius:8px; border:1px solid rgba(212,168,67,.3); background:rgba(255,255,255,.04); color:#c9b991; font-size:14px; font-weight:700; cursor:pointer; }
+        .rect-hours button small { display:block; font-size:9px; font-weight:400; opacity:.7; }
+        .rect-hours button.on { background:rgba(212,168,67,.32); color:#fff3d6; border-color:#d4a843; }
+        .rect-presets { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+        .rect-presets button, .rect-ev button, .rect-skip { padding:4px 10px; border-radius:12px; border:1px solid rgba(212,168,67,.35); background:transparent; color:#cdbf9f; font-size:12px; cursor:pointer; }
+        .rect-ev { display:flex; gap:6px; } .rect-ev select, .rect-ev input { flex:1; min-width:0; padding:6px; border-radius:6px; border:1px solid rgba(212,168,67,.3); background:rgba(30,20,10,.8); color:#e8dcc8; font-size:13px; }
+        .rect-ev input { flex:0 0 90px; } .rect-ev button { flex:0 0 auto; background:rgba(212,168,67,.25); color:#fff3d6; }
+        .rect-chip { display:inline-flex; align-items:center; gap:6px; margin:6px 6px 0 0; padding:3px 4px 3px 10px; border-radius:12px; background:rgba(63,167,224,.15); border:1px solid rgba(63,167,224,.5); color:#bfe4fb; font-size:12px; }
+        .rect-chip button { background:none; border:none; color:#bfe4fb; cursor:pointer; }
+        .rect-q { background:rgba(255,255,255,.05); border:1px solid rgba(212,168,67,.3); border-radius:10px; padding:10px 12px; }
+        .rect-qg { font-size:11px; color:#968a6e; } .rect-qt { font-size:15px; color:#fff3d6; font-weight:700; margin:2px 0 8px; }
+        .rect-opts { display:flex; flex-wrap:wrap; gap:6px; }
+        .rect-opts button { flex:1 1 auto; min-width:30%; padding:8px 8px; border-radius:8px; border:1px solid rgba(212,168,67,.5); background:rgba(212,168,67,.14); color:#fff3d6; font-size:13px; cursor:pointer; text-align:center; }
+        .rect-qa { display:flex; gap:6px; margin-top:8px; } .rect-done { color:#c9b991; }
+        .rect-ans { font-size:11px; color:#968a6e; margin-top:6px; }
+        .rect-row { display:grid; grid-template-columns:56px 1fr auto; gap:8px; align-items:center; padding:7px 4px; border-bottom:1px solid rgba(212,168,67,.15); }
+        .rect-row.top { background:rgba(212,168,67,.1); border-radius:8px; }
+        .rect-rl b { display:block; font-size:15px; color:#fff3d6; } .rect-rl small { color:#968a6e; font-size:10px; }
+        .rect-bar { height:8px; background:rgba(255,255,255,.08); border-radius:4px; overflow:hidden; } .rect-bar i { display:block; height:100%; background:linear-gradient(90deg,#b8860b,#e6b422); }
+        .rect-rd { font-size:11px; color:#a89a80; margin-top:3px; }
+        .rect-rr { text-align:right; } .rect-rr b { display:block; color:#f0d090; font-size:15px; }
+        .rect-rr button { margin-top:2px; padding:3px 8px; border-radius:10px; border:1px solid #d4a843; background:transparent; color:#e6c77a; font-size:11px; cursor:pointer; white-space:nowrap; }
+        .rect-msg { color:#d9773a; font-size:12px; min-height:16px; margin-top:6px; } .rect-foot { color:#7d725d; font-size:11px; margin-top:6px; }
         .fy-stepper { display:flex; align-items:stretch; gap:6px; }
         .fy-arrow { flex:0 0 44px; min-height:40px; border:1px solid rgba(184,134,11,0.45); border-radius:6px; background:rgba(30,20,10,0.7);
                     color:var(--gold-light); font-size:15px; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
@@ -412,6 +443,7 @@
                 <option value="11">亥時 (21-23)</option>
                 <option value="12">晚子時 (23-24)</option>
             </select>
+            <button type="button" class="rect-btn" onclick="openRectify()">🔍 時辰不確定？定盤助手</button>
         </div>
         <div class="ctrl-group">
             <label>性別</label>
@@ -3933,6 +3965,11 @@ function updateBirthInfo() {
         `<b>${d.yearGan}${d.yearZhi}年</b>　${juName}　${d.daxianDir}　｜　` +
         `流年${flowYearGan}${DI_ZHI[getFlowYearZhiIdx(fy)]}（${fy}）虛歲${currentAge}・流年命宮在${DI_ZHI[getFlowYearZhiIdx(fy)]}（本命${(palaceByDz(d.palaces, getFlowYearZhiIdx(fy)) || {}).name || '?'}）　｜　` +
         `<b style="color:var(--gold-light)">${dxInfo}</b>`;
+    const RN = window.RECT_NOTE;
+    if (RN && String(RN.hr) === document.getElementById('birthHour').value && String(RN.y) === document.getElementById('solarYear').value &&
+        String(RN.m) === document.getElementById('solarMonth').value && String(RN.d) === document.getElementById('solarDay').value) {
+        document.getElementById('birthInfo').innerHTML += `　｜　<b style="color:#e6b422">🔍 推定時辰（可能性 ${RN.p}%）</b>`;
+    }
 }
 
 function renderGrid() {
@@ -5625,6 +5662,279 @@ function pvFromUrl(q) {
     return true;
 }
 
+// ================================================================
+//  🔍 定盤助手：時辰不確定時，以候選盤比對＋逐題問答推定時辰
+//  證據權重：過去事件應期 ＞ 六親結構 ＞ 個性 ＞ 外貌
+//  全部在本機計算，不送出任何資料
+// ================================================================
+const RECT_HOURS = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const RECT_RANGE = ['23–01','01–03','03–05','05–07','07–09','09–11','11–13','13–15','15–17','17–19','19–21','21–23'];
+const RECT_SHA = ['擎羊','陀羅','火星','鈴星','地空','地劫'];
+let RECT = null;
+
+// ── 候選盤 ──
+function rectCandidates(hours) {
+    const y = +document.getElementById('solarYear').value, m = +document.getElementById('solarMonth').value, d = +document.getElementById('solarDay').value;
+    const g = document.getElementById('gender').value;
+    const L = solarToLunar(y, m, d);
+    const saved = chartData;
+    const cands = hours.map(hr => {
+        const ch = calculateChart(L.year, L.month, L.day, hr, g, L.isLeap ? 1 : 0);
+        chartData = ch;
+        let A = null; try { A = analyzePersonality(); } catch (e) {}
+        chartData = saved;
+        const ming = ch.palaces.find(p => p.isMing);
+        return { hr, chart: ch, A, ming, lunarYear: L.year };
+    });
+    chartData = saved;
+    return cands;
+}
+const rectP = (c, name) => c.chart.palaces.find(p => p.name === name);
+function rectStars(c, name) { const p = rectP(c, name); return p ? [...p.stars.m, ...p.stars.a, ...p.stars.b] : []; }
+function rectMains(c, name) { const p = rectP(c, name); return p ? psMains(c.chart.palaces, p).stars : []; }
+function rectBirthHua(c, name, k) { const s = SIHUA[c.chart.yearGan][k]; return rectStars(c, name).includes(s); }
+const rectCount = (arr, list) => arr.filter(s => list.includes(s)).length;
+const rectClamp = (v, a = 0.08, b = 0.85) => Math.max(a, Math.min(b, v));
+function rectDark(c, name, star) { const p = rectP(c, name); if (!p || !p.stars.m.includes(star)) return false; return psBright(star, p.dzIdx).lv < 0; }
+
+// ── 題庫：每題回傳各選項在此候選盤下的機率 ──
+const RECT_Q = [
+    { id: 'sib', group: '六親', q: '兄弟姊妹（不含自己）有幾位？', opts: ['沒有', '1–2 位', '3 位以上'],
+      L(c) {
+          const st = rectStars(c, '兄弟宮'), mains = rectMains(c, '兄弟宮');
+          let s = rectCount(mains, ['紫微','天府','天同','天梁','天相','太陰']) * 1.0
+                + rectCount(st, ['左輔','右弼','天魁','天鉞']) * 0.5
+                - rectCount(st, ['七殺','破軍','武曲','巨門','廉貞', ...RECT_SHA]) * 0.6
+                - (rectBirthHua(c, '兄弟宮', '忌') ? 0.6 : 0) - (rectP(c, '兄弟宮').stars.m.length ? 0 : 0.3);
+          const t = Math.tanh(s / 2), p3 = 0.25 + 0.15 * t, p0 = 0.2 - 0.12 * t;
+          return [p0, 1 - p0 - p3, p3];
+      } },
+    { id: 'parent', group: '六親', q: '父母是否有一方較早過世，或在您成年前分開？', opts: ['是', '否'],
+      L(c) {
+          const st = rectStars(c, '父母宮'), mains = rectMains(c, '父母宮');
+          let p = 0.2 + (rectBirthHua(c, '父母宮', '忌') ? 0.25 : 0) + rectCount(st, RECT_SHA) * 0.12
+                + (rectDark(c, '父母宮', '太陽') ? 0.1 : 0) + (rectDark(c, '父母宮', '太陰') ? 0.1 : 0)
+                - rectCount(mains, ['天梁','天府','紫微']) * 0.08;
+          p = rectClamp(p); return [p, 1 - p];
+      } },
+    { id: 'marry', group: '六親', q: '是否有過兩段以上的婚姻（或長期同居）？', opts: ['是', '否'],
+      L(c) {
+          const st = rectStars(c, '夫妻宮'), mains = rectMains(c, '夫妻宮');
+          let p = 0.18 + (rectCount(mains, ['貪狼','廉貞','破軍','七殺','巨門','天機']) ? 0.15 : 0)
+                + (rectBirthHua(c, '夫妻宮', '忌') ? 0.2 : 0) + rectCount(st, RECT_SHA) * 0.1
+                + rectCount(st, ['左輔','右弼']) * 0.08 + (rectP(c, '夫妻宮').stars.m.length ? 0 : 0.05)
+                - rectCount(mains, ['天府','天相','紫微','天梁']) * 0.08;
+          p = rectClamp(p); return [p, 1 - p];
+      } },
+    { id: 'surgery', group: '健康', q: '是否曾經開刀，或住院超過一週？', opts: ['是', '否'],
+      L(c) {
+          const st = rectStars(c, '疾厄宮'), mains = rectMains(c, '疾厄宮');
+          let p = 0.25 + (st.includes('擎羊') ? 0.25 : 0) + (rectBirthHua(c, '疾厄宮', '忌') ? 0.2 : 0)
+                + rectCount(st, ['陀羅','火星','鈴星']) * 0.1 + (rectCount(mains, ['七殺','破軍','廉貞']) ? 0.1 : 0)
+                - rectCount(mains, ['天梁','天同']) * 0.08;
+          p = rectClamp(p); return [p, 1 - p];
+      } },
+    { id: 'temper', group: '個性', q: '脾氣是否偏急、容易發火？', opts: ['是', '還好', '很溫和'],
+      L(c) {
+          const m = rectStars(c, '命宮'), f = rectStars(c, '福德宮'), mm = rectMains(c, '命宮');
+          let p = 0.3 + rectCount(m, ['火星','鈴星','擎羊']) * 0.2 + rectCount(f, ['火星','鈴星','擎羊']) * 0.1
+                + (rectCount(mm, ['七殺','破軍','廉貞']) ? 0.12 : 0) - rectCount(mm, ['天同','太陰','天府','天梁']) * 0.1;
+          p = rectClamp(p, 0.08, 0.8); const calm = rectClamp(0.6 - p, 0.08, 0.6);
+          return [p, Math.max(0.08, 1 - p - calm), calm];
+      } },
+    { id: 'speech', group: '個性', q: '是否能言善道，或常因為說話惹是非？', opts: ['是', '否'],
+      L(c) {
+          const m = rectStars(c, '命宮'), mm = rectMains(c, '命宮'), q = rectMains(c, '遷移宮');
+          let p = 0.35 + Math.min(0.3, rectCount([...mm, ...m], ['巨門','文曲','天機','太陽']) * 0.15)
+                + (q.includes('巨門') ? 0.08 : 0) - rectCount(mm, ['武曲','七殺','天府']) * 0.1;
+          p = rectClamp(p); return [p, 1 - p];
+      } },
+    { id: 'travel', group: '個性', q: '工作或生活是否常需要外出奔波、出差或搬遷？', opts: ['是', '否'],
+      L(c) {
+          const all = [...rectStars(c, '命宮'), ...rectStars(c, '遷移宮'), ...rectStars(c, '官祿宮')];
+          const mm = [...rectMains(c, '命宮'), ...rectMains(c, '遷移宮')];
+          let p = 0.3 + (all.includes('天馬') ? 0.2 : 0) + (rectCount(mm, ['七殺','破軍','天機']) ? 0.12 : 0)
+                + (rectBirthHua(c, '遷移宮', '祿') ? 0.1 : 0) - rectCount(rectMains(c, '命宮'), ['天府','太陰','天同']) * 0.08;
+          p = rectClamp(p); return [p, 1 - p];
+      } },
+    { id: 'body', group: '外貌', q: '身材比較接近哪一種？', opts: ['偏瘦高', '中等', '圓潤或壯碩'], weak: true,
+      L(c) {
+          const T = { 紫微:[.2,.4,.4], 天機:[.55,.3,.15], 太陽:[.25,.45,.3], 武曲:[.2,.4,.4], 天同:[.15,.3,.55], 廉貞:[.35,.45,.2], 天府:[.15,.3,.55],
+                      太陰:[.45,.35,.2], 貪狼:[.3,.4,.3], 巨門:[.35,.35,.3], 天相:[.25,.45,.3], 天梁:[.4,.35,.25], 七殺:[.35,.45,.2], 破軍:[.25,.4,.35] };
+          const mm = rectMains(c, '命宮').filter(s => T[s]);
+          if (!mm.length) return [1/3, 1/3, 1/3];
+          return [0, 1, 2].map(i => mm.reduce((a, s) => a + T[s][i], 0) / mm.length);
+      } },
+    { id: 'skin', group: '外貌', q: '膚色比較接近？', opts: ['偏白', '中等', '偏深或紅潤'], weak: true,
+      L(c) {
+          const st = [...rectMains(c, '命宮'), ...rectStars(c, '命宮')];
+          let w = rectCount(st, ['太陰','天同','文昌','天府','天相']) - rectCount(st, ['太陽','武曲','七殺','火星','鈴星','破軍']);
+          const t = Math.tanh(w / 2);
+          return [0.33 + 0.2 * t, 0.34, 0.33 - 0.2 * t];
+      } },
+];
+// 個性定調題（動態）：列出各候選盤的一句話人格
+function rectPersonaQ() {
+    const seen = new Map();
+    RECT.cands.forEach((c, i) => { if (c.A && RECT.post[i] > 0.03 && !seen.has(c.A.headline)) seen.set(c.A.headline, i); });
+    const heads = [...seen.keys()].slice(0, 5);
+    if (heads.length < 2) return null;
+    return { id: 'persona', group: '個性', q: '以下哪一句最像本人？', opts: [...heads, '都不太像'],
+        L(c) { const n = heads.length; return [...heads.map(h => (c.A && c.A.headline === h) ? 0.6 : 0.4 / (n - 1)), 0.15].map(v => v); } };
+}
+
+// ── 事件應期 ──
+const RECT_EVENTS = {
+    '結婚或訂婚':   { pal: '夫妻宮', good: true },  '離婚或分手':   { pal: '夫妻宮', good: false },
+    '生小孩':       { pal: '子女宮', good: true },  '開刀或重病':   { pal: '疾厄宮', good: false },
+    '換工作、升遷或創業': { pal: '官祿宮', good: true }, '父母過世或重病': { pal: '父母宮', good: false },
+    '買房或搬家':   { pal: '田宅宮', good: true },  '破財或投資失利': { pal: '財帛宮', good: false },
+};
+function rectEventScore(c, type, year) {
+    const ev = RECT_EVENTS[type]; if (!ev) return 0;
+    const P = c.chart.palaces, tp = rectP(c, ev.pal); if (!tp) return 0;
+    const opp = palaceByDz(P, (tp.dzIdx + 6) % 12);
+    const age = year - c.lunarYear + 1;
+    const dx = getCurrentDaxian(c.chart.daxianList, age);
+    const layers = [[getFlowYearGan(year), 1.0]]; if (dx) layers.push([dx.gan, 0.8]);
+    let s = 0;
+    layers.forEach(([gan, f]) => {
+        const fly = computeFly(P, gan); if (!fly) return;
+        SH_KEYS.forEach(k => {
+            const to = fly[k].targetPalace;
+            const w = k === '忌' ? (ev.good ? 0.7 : 1.2) : k === '祿' ? (ev.good ? 1.2 : 0.5) : 0.5;
+            if (to === ev.pal) s += w * f;
+            else if (k === '忌' && opp && to === opp.name) s += 0.6 * f;   // 忌沖
+        });
+    });
+    const fz = getFlowYearZhiIdx(year);
+    if (fz === tp.dzIdx) s += 1.0; else if (fz === (tp.dzIdx + 6) % 12) s += 0.4;
+    if (dx && dx.dzIdx === tp.dzIdx) s += 0.6;
+    return s;
+}
+const rectEventL = s => Math.min(0.9, 0.25 + 0.17 * s);
+
+// ── 貝氏更新與選題 ──
+function rectNorm(a) { const t = a.reduce((x, y) => x + y, 0) || 1; return a.map(v => v / t); }
+function rectEntropy(a) { return -a.reduce((s, p) => s + (p > 0 ? p * Math.log(p) : 0), 0); }
+function rectLik(q, c) { const L = q.L(c); return q.weak ? L.map(v => Math.pow(v, 0.6)) : L; }
+function rectApply(q, optIdx) {
+    RECT.post = rectNorm(RECT.post.map((p, i) => p * rectLik(q, RECT.cands[i])[optIdx]));
+}
+function rectRecompute() {
+    RECT.post = rectNorm(RECT.cands.map(() => 1));
+    RECT.answers.forEach(a => rectApply(a.qObj, a.opt));
+    RECT.events.forEach(e => { RECT.post = rectNorm(RECT.post.map((p, i) => p * rectEventL(rectEventScore(RECT.cands[i], e.type, e.year)))); });
+}
+function rectNextQuestion() {
+    const asked = new Set(RECT.answers.map(a => a.qObj.id).concat(RECT.skipped));
+    const pool = RECT_Q.filter(q => !asked.has(q.id));
+    const pq = !asked.has('persona') ? rectPersonaQ() : null; if (pq) pool.push(pq);
+    const H0 = rectEntropy(RECT.post);
+    let best = null, bestGain = 0.01;
+    pool.forEach(q => {
+        const Ls = RECT.cands.map(c => rectLik(q, c));
+        let eh = 0;
+        q.opts.forEach((_, o) => {
+            const po = RECT.post.reduce((s, p, i) => s + p * Ls[i][o], 0); if (po <= 0) return;
+            eh += po * rectEntropy(rectNorm(RECT.post.map((p, i) => p * Ls[i][o])));
+        });
+        const gain = (H0 - eh) * (q.weak ? 0.6 : 1);
+        if (gain > bestGain) { bestGain = gain; best = q; }
+    });
+    return best;
+}
+
+// ── 介面 ──
+function openRectify() {
+    let ov = document.getElementById('rectOverlay');
+    if (!ov) { ov = document.createElement('div'); ov.id = 'rectOverlay'; document.body.appendChild(ov); }
+    ov.style.display = 'flex';
+    const cur = +document.getElementById('birthHour').value;
+    RECT = { hours: [], cands: [], post: [], answers: [], skipped: [], events: [], cur: null };
+    rectSetHours(cur >= 0 && cur <= 11 ? [((cur + 11) % 12), cur, (cur + 1) % 12] : RECT_HOURS.map((_, i) => i));
+}
+function rectSetHours(hours) {
+    RECT.hours = [...new Set(hours)].sort((a, b) => a - b);
+    RECT.cands = rectCandidates(RECT.hours);
+    RECT.answers = RECT.answers.filter(() => true);
+    rectRecompute(); RECT.cur = rectNextQuestion(); rectRender();
+}
+function rectToggleHour(h) {
+    const s = new Set(RECT.hours); s.has(h) ? s.delete(h) : s.add(h);
+    if (s.size < 2) { rectMsg('至少要選兩個時辰才能比對'); return; }
+    rectSetHours([...s]);
+}
+function rectPreset(list) { rectSetHours(list); }
+function rectAnswer(opt) {
+    if (opt < 0) RECT.skipped.push(RECT.cur.id);
+    else RECT.answers.push({ qObj: RECT.cur, opt, label: RECT.cur.opts[opt] });
+    rectRecompute(); RECT.cur = rectNextQuestion(); rectRender();
+}
+function rectUndo() { if (!RECT.answers.length) return; RECT.answers.pop(); rectRecompute(); RECT.cur = rectNextQuestion(); rectRender(); }
+function rectAddEvent() {
+    const type = document.getElementById('rectEvType').value, year = parseInt(document.getElementById('rectEvYear').value);
+    const by = RECT.cands[0] ? RECT.cands[0].lunarYear : 1900;
+    if (!year || year < by || year > new Date().getFullYear()) { rectMsg('請輸入出生之後、今年以前的年份'); return; }
+    RECT.events.push({ type, year }); rectRecompute(); RECT.cur = rectNextQuestion(); rectRender();
+}
+function rectDelEvent(i) { RECT.events.splice(i, 1); rectRecompute(); RECT.cur = rectNextQuestion(); rectRender(); }
+function rectMsg(t) { const el = document.getElementById('rectMsg'); if (el) { el.textContent = t; setTimeout(() => { if (el.textContent === t) el.textContent = ''; }, 3000); } }
+function rectApplyHour(hr) {
+    document.getElementById('birthHour').value = String(hr);
+    const top = RECT.post[RECT.cands.findIndex(c => c.hr === hr)] || 0;
+    window.RECT_NOTE = { hr, y: document.getElementById('solarYear').value, m: document.getElementById('solarMonth').value, d: document.getElementById('solarDay').value, p: Math.round(top * 100) };
+    document.getElementById('rectOverlay').style.display = 'none';
+    runChart();
+}
+function rectClose() { document.getElementById('rectOverlay').style.display = 'none'; }
+function rectConf(p) { return p >= 0.7 ? ['高', '#4cc38a'] : p >= 0.45 ? ['中', '#e6b422'] : ['低', '#d9773a']; }
+
+function rectRender() {
+    const ov = document.getElementById('rectOverlay'); if (!ov) return;
+    const order = RECT.cands.map((c, i) => ({ c, p: RECT.post[i] })).sort((a, b) => b.p - a.p);
+    const top = order[0], [cl, cc] = rectConf(top.p);
+    const nAns = RECT.answers.length + RECT.events.length;
+    let h = `<div class="rect-box">
+      <div class="rect-head"><b>🔍 定盤助手</b><button class="rect-x" onclick="rectClose()">✕</button></div>
+      <div class="rect-note">時辰不確定時，先選可能的範圍，再加入過去事件或回答問題，系統會比對各時辰的命盤並排出可能性。資料只在本機計算，不會送出。</div>
+      <div class="rect-sec">① 可能的時辰（點選增減）</div>
+      <div class="rect-hours">${RECT_HOURS.map((z, i) => `<button class="${RECT.hours.includes(i) ? 'on' : ''}" onclick="rectToggleHour(${i})">${z}<small>${RECT_RANGE[i]}</small></button>`).join('')}</div>
+      <div class="rect-presets">
+        <button onclick="rectPreset([0,1,2,3,4,5,6,7,8,9,10,11])">完全不知道</button>
+        <button onclick="rectPreset([0,1,2])">凌晨</button><button onclick="rectPreset([3,4,5])">早上</button>
+        <button onclick="rectPreset([6,7,8])">中午下午</button><button onclick="rectPreset([9,10,11])">傍晚晚上</button>
+      </div>
+      <div class="rect-sec">② 過去事件（最有效，記得年份即可）</div>
+      <div class="rect-ev">
+        <select id="rectEvType">${Object.keys(RECT_EVENTS).map(k => `<option>${k}</option>`).join('')}</select>
+        <input id="rectEvYear" type="number" inputmode="numeric" placeholder="西元年">
+        <button onclick="rectAddEvent()">加入</button>
+      </div>
+      ${RECT.events.map((e, i) => `<div class="rect-chip">${e.year}　${e.type}<button onclick="rectDelEvent(${i})">✕</button></div>`).join('')}
+      <div class="rect-sec">③ 回答問題（只會問能分辨時辰的題目）</div>`;
+    if (RECT.cur) {
+        h += `<div class="rect-q"><div class="rect-qg">${RECT.cur.group}${RECT.cur.weak ? '・參考' : ''}</div><div class="rect-qt">${RECT.cur.q}</div>
+          <div class="rect-opts">${RECT.cur.opts.map((o, i) => `<button onclick="rectAnswer(${i})">${o}</button>`).join('')}</div>
+          <div class="rect-qa"><button class="rect-skip" onclick="rectAnswer(-1)">不確定，跳過</button>${RECT.answers.length ? '<button class="rect-skip" onclick="rectUndo()">↶ 上一題</button>' : ''}</div></div>`;
+    } else {
+        h += `<div class="rect-q rect-done">${nAns ? '已沒有能再分辨這幾個時辰的問題。若結果仍接近，請再加入一件有年份的事件。' : '這幾個時辰在題庫中差異不大，請加入過去事件來分辨。'}${RECT.answers.length ? '<br><button class="rect-skip" onclick="rectUndo()">↶ 上一題</button>' : ''}</div>`;
+    }
+    if (RECT.answers.length) h += `<div class="rect-ans">已回答：${RECT.answers.map(a => `${a.qObj.q.replace(/[？?]$/, '')}→${a.label}`).join('；')}</div>`;
+    h += `<div class="rect-sec">④ 可能性排名　<span style="color:${cc}">信心${cl}</span>${nAns < 3 ? '<small>（建議至少 1 件事件＋3 題）</small>' : ''}</div>`;
+    order.forEach(({ c, p }, k) => {
+        const mm = c.ming.stars.m.length ? c.ming.stars.m.join('') : '空宮';
+        h += `<div class="rect-row${k === 0 ? ' top' : ''}">
+          <div class="rect-rl"><b>${RECT_HOURS[c.hr]}時</b><small>${RECT_RANGE[c.hr]}</small></div>
+          <div class="rect-rm"><div class="rect-bar"><i style="width:${Math.max(2, p * 100)}%"></i></div>
+            <div class="rect-rd">命宮${c.ming.dz}・${mm}　${c.A ? c.A.headline : ''}</div></div>
+          <div class="rect-rr"><b>${Math.round(p * 100)}%</b><button onclick="rectApplyHour(${c.hr})">用此時辰</button></div></div>`;
+    });
+    h += `<div id="rectMsg" class="rect-msg"></div>
+      <div class="rect-foot">推定結果僅供參考；事件與六親最可靠，外貌僅作輔助。套用後會在出生資訊標示「推定時辰」。</div></div>`;
+    ov.innerHTML = h;
+}
+
 function renderReport() {
     document.getElementById('reportArea').style.display = 'block';
     const palaces = chartData.palaces;
@@ -6926,7 +7236,7 @@ ${buildFlowAIText(chartData, (typeof currentDaxian !== 'undefined') ? currentDax
 
 論流年、流月時，請以上方「系統引動評分」為骨架（領域吉凶、疊忌疊祿、應期月），再結合宮內主星與化曜星性細論，並指出具體月份；不要與評分結論矛盾，若有不同看法請說明理由。
 ${(() => { try { return '\n' + buildPersonalityAIText() + '\n論命格、性格時，請以上方「系統人格分析」為骨架，結合主星廟旺、輔煞與飛化細論，並說明依據。\n'; } catch (e) { return ''; } })()}
-請以古典命理大師口吻回答，繁體中文，論斷精準直接，每次回答控制在300字以內。`;
+${(() => { const RN = window.RECT_NOTE; return (RN && String(RN.hr) === document.getElementById('birthHour').value) ? `注意：命主出生時辰不確定，此盤時辰為定盤推定（可能性約${RN.p}%），論斷時請適度保留。\n` : ''; })()}請以古典命理大師口吻回答，繁體中文，論斷精準直接，每次回答控制在300字以內。`;
 }
 
 // 呼叫 API（共用，支援對話歷史）

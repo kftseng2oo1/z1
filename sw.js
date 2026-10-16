@@ -1,6 +1,6 @@
 // Service Worker — 紫微斗數AI大師
 // 每次上傳新版 index.html 時，把 CACHE_VERSION 加 1
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v12';
 const CACHE_NAME = 'ziwei-z1-' + CACHE_VERSION;
 const OFFLINE_URL = '/z1/offline.html';
 const PRECACHE_URLS = [
