@@ -284,6 +284,24 @@
         .card.conflict { border-left-color: var(--vermillion); }
         .card.health { border-left-color: var(--jade); }
         .card.personality { border-left-color: var(--vermillion); }
+        #pvOverlay { position:fixed; inset:0; background:rgba(10,6,2,.93); z-index:9999; display:none; align-items:center; justify-content:center; padding:12px; padding-top:max(12px, env(safe-area-inset-top)); padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+        #pvOverlay .pv-box { display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; max-width:480px; }
+        #pvCanvas { height:min(66vh, 840px); width:auto; max-width:100%; aspect-ratio:9/16; border-radius:10px; box-shadow:0 6px 30px rgba(0,0,0,.5); }
+        #pvOverlay .pv-bar { width:min(100%, calc(66vh * 9 / 16)); height:4px; background:rgba(255,255,255,.15); border-radius:2px; overflow:hidden; }
+        #pvProg { height:100%; width:0; background:#d4a843; }
+        #pvOverlay .pv-ctrl { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+        #pvOverlay .pv-ctrl button { background:rgba(255,255,255,.1); color:#f7f1e3; border:1px solid rgba(212,168,67,.5); border-radius:18px; padding:7px 11px; font-size:13px; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+        #pvOverlay .pv-ctrl button:active { background:rgba(212,168,67,.35); }
+        #pvOverlay .pv-msg { color:#d4a843; font-size:12px; min-height:16px; text-align:center; }
+        .pv-open-btn { display:block; margin:0 auto 10px; padding:9px 18px; border-radius:20px; border:none; background:linear-gradient(135deg,#c0392b,#b8860b); color:#fff; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 2px 8px rgba(192,57,43,.3); }
+        .pv-gate { position:fixed; inset:0; z-index:10000; background:rgba(10,6,2,.92); display:flex; align-items:center; justify-content:center; }
+        .pv-gate-box { text-align:center; color:#f3e9d2; padding:30px; }
+        .pv-gate-sub { color:#d4a843; letter-spacing:4px; font-size:14px; }
+        .pv-gate-title { font-family:"Noto Serif TC",serif; font-size:40px; font-weight:900; margin:8px 0; }
+        .pv-gate-info { color:#c9b991; margin-bottom:22px; min-height:1em; }
+        .pv-gate-btn { padding:14px 30px; border-radius:30px; border:none; background:linear-gradient(135deg,#c0392b,#b8860b); color:#fff; font-size:18px; font-weight:700; cursor:pointer; }
+        .pv-gate-skip { margin-top:16px; color:#968a6e; font-size:13px; cursor:pointer; text-decoration:underline; }
+
         .card.personality .card-h { color: var(--vermillion); }
         .ps-head { font-family:"Noto Serif TC",serif; font-size:15px; font-weight:900; color:#7a1f1f; text-align:center; margin:2px 0 4px; }
         .ps-sec { font-weight:700; color:#8a6d1f; margin:10px 0 4px; }
@@ -5100,7 +5118,8 @@ function buildPersonalityCard() {
     const P = chartData.palaces;
     const dom = n => (typeof MF_DOMAIN !== 'undefined' && MF_DOMAIN[n]) ? MF_DOMAIN[n].theme : n.replace('宮', '');
     const auxStr = p => [...p.stars.a, ...p.stars.b].filter(s => PS_AUX[s]).map(s => `${s}（${PS_AUX[s].t}）`).join('、');
-    let h = `<div class="ps-head">${A.headline}</div>`;
+    let h = `<button class="pv-open-btn" onclick="event.stopPropagation();openPersonalityVideo()">🎬 人格動畫旁白・分享</button>`;
+    h += `<div class="ps-head">${A.headline}</div>`;
     h += psRadarSvg(A.dims);
     if (A.pattern) h += `<div class="ps-sec">◆ 格局基調：${A.pattern.key}（${A.pattern.name}）</div><div>${A.pattern.t}。</div>`;
 
@@ -5146,6 +5165,464 @@ function buildPersonalityAIText() {
         `優勢：${A.good.map(x => x.t).join('；')}\n盲點：${A.flaw.map(x => x.t).join('；')}\n` +
         `命忌入${A.fixP || '?'}（執著點）；命祿入${A.luP || '?'}；來因宮${A.laiyin ? A.laiyin.name : '?'}` +
         (A.selfT.length ? `；命宮自化${A.selfT.map(s => s.type).join('、')}` : '');
+}
+
+// ================================================================
+//  🎬 人格分析動畫・旁白・分享（ZIWEI 與 z1 共用）
+// ================================================================
+const PV = { W: 1080, H: 1920, st: null };
+function pvTheme() {
+    const dark = typeof mfaPlay === 'function';   // ZIWEI 用深色，z1 用宣紙色
+    return dark
+        ? { dark, bg1: '#1d140c', bg2: '#0d0805', text: '#f3e9d2', sub: '#c9b991', mute: '#968a6e', gold: '#d4a843', goldL: '#f0d090',
+            red: '#e2735f', green: '#4cc38a', panel: 'rgba(255,255,255,0.06)', line: 'rgba(212,168,67,0.45)', cap: 'rgba(0,0,0,0.78)' }
+        : { dark, bg1: '#f7f1e3', bg2: '#efe4cc', text: '#1a1008', sub: '#5a4630', mute: '#8a7d6a', gold: '#b8860b', goldL: '#d4a843',
+            red: '#c0392b', green: '#1e8449', panel: '#fffaf0', line: 'rgba(184,134,11,0.45)', cap: 'rgba(26,16,8,0.86)' };
+}
+const PV_FONT = '"Noto Serif TC","PingFang TC","Songti TC","Heiti TC",serif';
+const PV_SANS = '"Noto Sans TC","PingFang TC","Heiti TC",sans-serif';
+const pvEase = x => { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3); };
+
+// ── 旁白用的白話 ──
+function pvSpeakPalace(P, p) {
+    const M = psMains(P, p);
+    if (!M.stars.length) return '沒有主星';
+    const parts = M.stars.map(s => {
+        const b = psBright(s, M.dz);
+        return s + (b.w === '廟' ? '入廟' : b.lv < 0 ? '落陷' : '');
+    });
+    const kw = M.stars.map(s => PS_STAR[s] ? PS_STAR[s].k : '').filter(Boolean).join('、');
+    return (M.borrowed ? `空宮，借對宮${parts.join('、')}` : `主星${parts.join('、')}`) + (kw ? `，${kw}` : '');
+}
+function pvSplit(text) {
+    const out = []; let cur = '';
+    for (const ch of text) { cur += ch; if ('。！？'.includes(ch)) { out.push(cur.trim()); cur = ''; } }
+    if (cur.trim()) out.push(cur.trim());
+    return out.filter(Boolean);
+}
+const pvDur = t => Math.max(1.8, t.replace(/[，。、：；（）\s]/g, '').length / 4.5 + 0.5);
+
+function pvBuild(durs) {
+    const A = analyzePersonality();
+    const P = chartData.palaces;
+    const raw = document.getElementById('personName')?.value?.trim() || '';
+    const name = raw && raw !== '命主' ? raw : '';
+    const theme = n => (typeof MF_DOMAIN !== 'undefined' && MF_DOMAIN[n]) ? MF_DOMAIN[n].theme : n.replace('宮', '');
+    const S = [];
+    S.push({ type: 'intro', A, name, lines: [
+        `${name ? name + '的' : ''}紫微人格分析。`,
+        `一句話來說，${A.headline.replace(/・/g, '，')}。` ] });
+    const top = A.topDims, low = A.lowDims;
+    S.push({ type: 'radar', A, lines: [
+        '先看六個面向。',
+        `最突出的是${top.join('和')}，${PS_GOOD[top[0]]}，也${PS_GOOD[top[1]]}。`,
+        ...(low.length ? [`相對較弱的是${low.join('和')}，${PS_WEAK[low[0]]}。`] : ['六個面向相當均衡。']) ] });
+    if (A.pattern) S.push({ type: 'pattern', A, lines: [
+        `命宮三方四正屬於${A.pattern.key}，是${A.pattern.name}的人。`, `${A.pattern.t}。` ] });
+    S.push({ type: 'layers', A, rows: [
+        ['外顯', '命宮', pvSpeakPalace(P, A.ming)],
+        ['在外', '遷移宮', pvSpeakPalace(P, A.qian)],
+        ['內心', '福德宮', pvSpeakPalace(P, A.fu)],
+        ['後天', A.sameShen ? '身命同宮' : `身宮在${A.shen.name}`, A.sameShen ? '表裡一致，個性到中年後更鮮明' : `中年後重心轉向${theme(A.shen.name)}`] ],
+        lines: [
+        `外顯看命宮，${pvSpeakPalace(P, A.ming)}。`,
+        `在外看遷移宮，${pvSpeakPalace(P, A.qian)}。`,
+        `內心看福德宮，${pvSpeakPalace(P, A.fu)}。`,
+        A.sameShen ? '身命同宮，表裡一致，個性到中年後更鮮明。' : `身宮在${A.shen.name}，中年後重心轉向${theme(A.shen.name)}。` ] });
+    const goods = A.good.slice(0, 3), flaws = A.flaw.slice(0, 3);
+    S.push({ type: 'list', kind: 'good', items: goods, lines: ['先說優勢。', ...goods.map(x => x.t + '。')] });
+    S.push({ type: 'list', kind: 'flaw', items: flaws, lines: ['再看要留意的盲點。', ...flaws.map(x => x.t + '。')] });
+    const fl = [], cards = [];
+    if (A.fixP) { fl.push(`命宮化忌入${A.fixP}，${PS_FIX[A.fixP]}，這是一生的執著點。`); cards.push(['執著點', A.fixP, PS_FIX[A.fixP]]); }
+    if (A.luP) { fl.push(`化祿入${A.luP}，對${theme(A.luP)}特別有緣。`); cards.push(['緣分所在', A.luP, theme(A.luP)]); }
+    if (A.laiyin) { fl.push(`來因宮在${A.laiyin.name}，一生的課題圍繞${theme(A.laiyin.name)}。`); cards.push(['來因宮', A.laiyin.name, theme(A.laiyin.name)]); }
+    if (fl.length) S.push({ type: 'fly', cards, lines: ['從飛星看心性。', ...fl] });
+    S.push({ type: 'outro', A, name, lines: [
+        ...(A.pattern ? [`適合往${A.pattern.job}發展。`, `與這樣的人相處，${A.pattern.relate}。`] : []),
+        '以上是依命盤推算的人格參考。' ] });
+
+    let t0 = 0, si = 0;
+    S.forEach(s => {
+        s.sents = s.lines.flatMap(pvSplit).map(text => { const d = durs && durs[si] != null ? durs[si] + 0.35 : pvDur(text); si++; return { text, dur: d }; });
+        s.start = t0; let st = 0.4;
+        s.sents.forEach(x => { x.at = st; x.start = t0 + st; st += x.dur; });
+        s.dur = st + 0.7; t0 += s.dur;
+    });
+    return { S, total: t0, A, name };
+}
+
+// ── 繪圖 ──
+function pvRR(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function pvText(c, s, x, y, size, color, w = 400, align = 'center', fam = PV_FONT) { c.font = `${w} ${size}px ${fam}`; c.fillStyle = color; c.textAlign = align; c.textBaseline = 'middle'; c.fillText(s, x, y); }
+function pvWrap(c, text, maxW) {
+    const lines = []; let cur = '';
+    for (const ch of text) {
+        if (c.measureText(cur + ch).width > maxW && cur) { if ('，。、：；！？）」'.includes(ch)) { cur += ch; continue; } lines.push(cur); cur = ch; }
+        else cur += ch;
+    }
+    if (cur) lines.push(cur); return lines;
+}
+function pvBg(c, D) {
+    const T = pvTheme();
+    const g = c.createLinearGradient(0, 0, 0, PV.H); g.addColorStop(0, T.bg1); g.addColorStop(1, T.bg2);
+    c.fillStyle = g; c.fillRect(0, 0, PV.W, PV.H);
+    c.strokeStyle = T.goldL; c.lineWidth = 4; c.strokeRect(36, 36, PV.W - 72, PV.H - 72);
+    c.strokeStyle = T.line; c.lineWidth = 1.5; c.strokeRect(52, 52, PV.W - 104, PV.H - 104);
+    pvText(c, `紫微斗數 · ${D.name ? D.name + ' · ' : ''}人格分析`, PV.W / 2, 118, 34, T.gold, 600);
+    pvText(c, location.host + location.pathname.replace(/index\.html$/, ''), PV.W / 2, PV.H - 76, 26, T.mute);
+}
+function pvCaption(c, text) {
+    if (!text) return;
+    const T = pvTheme();
+    c.font = `600 46px ${PV_SANS}`;
+    const lines = pvWrap(c, text, PV.W - 220), lh = 64, h = lines.length * lh + 56, y = PV.H - 150 - h;
+    c.fillStyle = T.cap; pvRR(c, 80, y, PV.W - 160, h, 28); c.fill();
+    lines.forEach((l, i) => pvText(c, l, PV.W / 2, y + 28 + lh * i + 32, 46, '#fff', 600, 'center', PV_SANS));
+}
+const pvReveal = (s, t, i, d = 0.5) => s.sents[i] ? pvEase((t - s.sents[i].at) / d) : 0;
+function pvTitle(c, t, title, sub) {
+    const T = pvTheme(), e = pvEase(t * 2);
+    c.save(); c.globalAlpha = e;
+    pvText(c, title, PV.W / 2, 250 - (1 - e) * 30, 76, T.text, 700);
+    if (sub) pvText(c, sub, PV.W / 2, 320, 34, T.mute);
+    c.restore();
+}
+function pvRadar(c, cx, cy, R, dims, k, hl) {
+    const T = pvTheme(), N = 6;
+    const pt = (i, r) => { const a = -Math.PI / 2 + i * 2 * Math.PI / N; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+    [0.25, 0.5, 0.75, 1].forEach(f => {
+        c.beginPath(); for (let i = 0; i < N; i++) { const [x, y] = pt(i, R * f); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath();
+        c.strokeStyle = T.line; c.lineWidth = f === 1 ? 2.5 : 1; c.stroke();
+    });
+    c.beginPath(); dims.forEach((v, i) => { const [x, y] = pt(i, R * v / 100 * k); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.closePath();
+    c.fillStyle = T.dark ? 'rgba(226,115,95,0.28)' : 'rgba(192,57,43,0.18)'; c.fill();
+    c.strokeStyle = T.red; c.lineWidth = 4; c.stroke();
+    PS_DIMS.forEach((d, i) => {
+        const [x, y] = pt(i, R + 70), on = hl && hl.includes(d);
+        pvText(c, d, x, y - 14, on ? 50 : 42, on ? T.red : T.sub, 700);
+        pvText(c, String(Math.round(dims[i] * k)), x, y + 32, 32, T.mute);
+    });
+}
+
+const PV_DRAW = {
+    intro(c, s, t) {
+        const T = pvTheme(), A = s.A, e = pvEase(t * 1.5);
+        c.save(); c.globalAlpha = e;
+        pvText(c, s.name ? `${s.name} 的人格特質` : '人格特質', PV.W / 2, 330, 44, T.mute);
+        pvText(c, '命格全方位分析', PV.W / 2, 450, 92, T.text, 900);
+        c.restore();
+        const k = pvEase((t - 0.6) * 1.5);
+        if (k > 0 && A.pattern) {
+            const r = 170 * (0.6 + 0.4 * k);
+            c.save(); c.globalAlpha = k; c.translate(PV.W / 2, 760); c.rotate(-0.05);
+            c.fillStyle = T.red; pvRR(c, -r, -r, r * 2, r * 2, 26); c.fill();
+            pvText(c, A.pattern.name.slice(0, 2), 0, -18, r * 0.62, '#fff', 900);
+            pvText(c, A.pattern.key, 0, r * 0.55, r * 0.18, '#fff', 700);
+            c.restore();
+        }
+        const k2 = pvReveal(s, t, 1);
+        if (k2 > 0) {
+            c.save(); c.globalAlpha = k2;
+            c.font = `700 52px ${PV_FONT}`;
+            pvWrap(c, A.headline, PV.W - 220).forEach((l, i) => pvText(c, l, PV.W / 2, 1060 + i * 72, 52, T.text, 700));
+            c.restore();
+        }
+    },
+    radar(c, s, t) {
+        pvTitle(c, t, '六維人格', '領導・智謀・穩定・人緣・感性・行動');
+        const k = pvEase((t - 0.3) / 1.6);
+        const hl = pvReveal(s, t, 2) > 0.5 ? s.A.lowDims : pvReveal(s, t, 1) > 0.5 ? s.A.topDims : null;
+        pvRadar(c, PV.W / 2, 860, 300, s.A.dims, k, hl);
+    },
+    pattern(c, s, t) {
+        const T = pvTheme(), P = s.A.pattern;
+        pvTitle(c, t, '格局基調', '命宮三方四正');
+        const k = pvEase((t - 0.3) * 2);
+        c.save(); c.globalAlpha = k;
+        pvText(c, P.name, PV.W / 2, 560, 150, T.red, 900);
+        pvText(c, P.key, PV.W / 2, 700, 56, T.gold, 700);
+        P.stars.forEach((st, i) => {
+            const w = 170, gap = 20, tot = P.stars.length * w + (P.stars.length - 1) * gap, x = PV.W / 2 - tot / 2 + i * (w + gap);
+            c.fillStyle = T.panel; pvRR(c, x, 790, w, 90, 18); c.fill(); c.strokeStyle = T.line; c.lineWidth = 2; c.stroke();
+            pvText(c, st, x + w / 2, 836, 42, T.text, 700);
+        });
+        c.restore();
+        const k2 = pvReveal(s, t, 1);
+        if (k2 > 0) { c.save(); c.globalAlpha = k2; c.font = `500 48px ${PV_SANS}`;
+            pvWrap(c, P.t, PV.W - 240).forEach((l, i) => pvText(c, l, PV.W / 2, 1000 + i * 70, 48, T.sub, 500, 'center', PV_SANS)); c.restore(); }
+    },
+    layers(c, s, t) {
+        const T = pvTheme();
+        pvTitle(c, t, '三層人格', '外顯・在外・內心・後天');
+        s.rows.forEach((r, i) => {
+            const k = pvReveal(s, t, i); if (k <= 0) return;
+            const y = 400 + i * 250 + (1 - k) * 30;
+            c.save(); c.globalAlpha = k;
+            c.fillStyle = T.panel; pvRR(c, 90, y, PV.W - 180, 220, 24); c.fill();
+            c.strokeStyle = T.line; c.lineWidth = 2; c.stroke();
+            c.fillStyle = T.red; pvRR(c, 90, y, 170, 220, 24); c.fill();
+            pvText(c, r[0], 175, y + 110, 56, '#fff', 900);
+            pvText(c, r[1], 290, y + 62, 36, T.gold, 700, 'left');
+            c.font = `500 40px ${PV_SANS}`;
+            pvWrap(c, r[2], PV.W - 420).slice(0, 2).forEach((l, j) => pvText(c, l, 290, y + 125 + j * 54, 40, T.text, 500, 'left', PV_SANS));
+            c.restore();
+        });
+    },
+    list(c, s, t) {
+        const T = pvTheme(), good = s.kind === 'good', col = good ? T.green : T.red;
+        pvTitle(c, t, good ? '✦ 優勢' : '⚠ 盲點', good ? '天生的長處' : '需要留意的地方');
+        s.items.forEach((it, i) => {
+            const k = pvReveal(s, t, i + 1); if (k <= 0) return;
+            const y = 430 + i * 290 + (1 - k) * 30;
+            c.save(); c.globalAlpha = k;
+            c.fillStyle = T.panel; pvRR(c, 90, y, PV.W - 180, 250, 24); c.fill();
+            c.strokeStyle = col; c.lineWidth = 3; c.stroke();
+            c.beginPath(); c.arc(170, y + 125, 48, 0, Math.PI * 2); c.fillStyle = col; c.fill();
+            pvText(c, String(i + 1), 170, y + 127, 52, '#fff', 900);
+            c.font = `700 46px ${PV_FONT}`;
+            pvWrap(c, it.t, PV.W - 420).slice(0, 2).forEach((l, j) => pvText(c, l, 250, y + 85 + j * 62, 46, T.text, 700, 'left'));
+            pvText(c, it.why, 250, y + 205, 32, T.mute, 400, 'left', PV_SANS);
+            c.restore();
+        });
+    },
+    fly(c, s, t) {
+        const T = pvTheme();
+        pvTitle(c, t, '飛星心性', '命宮飛化看內在動機');
+        s.cards.forEach((cd, i) => {
+            const k = pvReveal(s, t, i + 1); if (k <= 0) return;
+            const y = 420 + i * 300 + (1 - k) * 30, col = i === 0 ? T.red : i === 1 ? T.green : T.gold;
+            c.save(); c.globalAlpha = k;
+            c.fillStyle = T.panel; pvRR(c, 90, y, PV.W - 180, 260, 24); c.fill(); c.strokeStyle = col; c.lineWidth = 3; c.stroke();
+            pvText(c, cd[0], 140, y + 62, 40, col, 700, 'left');
+            pvText(c, cd[1], PV.W - 140, y + 62, 40, T.gold, 700, 'right');
+            c.font = `700 50px ${PV_FONT}`;
+            pvWrap(c, cd[2], PV.W - 300).slice(0, 2).forEach((l, j) => pvText(c, l, 140, y + 145 + j * 66, 50, T.text, 700, 'left'));
+            c.restore();
+        });
+    },
+    outro(c, s, t) {
+        const T = pvTheme(), P = s.A.pattern;
+        pvTitle(c, t, '發展與相處', '');
+        const cards = P ? [['適合方向', P.job, T.green], ['相處之道', P.relate, T.gold]] : [];
+        let y = 400;
+        cards.forEach((cd, i) => {
+            const k = pvReveal(s, t, i); if (k <= 0) return;
+            c.save(); c.globalAlpha = k; c.font = `500 46px ${PV_SANS}`;
+            const ls = pvWrap(c, cd[1], PV.W - 320), h = 130 + ls.length * 62;
+            c.fillStyle = T.panel; pvRR(c, 90, y, PV.W - 180, h, 26); c.fill();
+            c.fillStyle = cd[2]; c.fillRect(90, y, 14, h);
+            pvText(c, cd[0], 140, y + 70, 50, cd[2], 900, 'left');
+            ls.forEach((l, j) => pvText(c, l, 140, y + 140 + j * 62, 46, T.text, 500, 'left', PV_SANS));
+            c.restore(); y += h + 40;
+        });
+        const k = pvReveal(s, t, s.sents.length - 1);
+        if (k > 0) { c.save(); c.globalAlpha = k; pvText(c, '知命・用命', PV.W / 2, Math.max(y + 140, 1180), 80, T.red, 900); c.restore(); }
+    },
+};
+function pvRenderAt(c, D, t, capOverride) {
+    let s = D.S[D.S.length - 1];
+    for (const sc of D.S) if (t < sc.start + sc.dur) { s = sc; break; }
+    const lt = Math.max(0, t - s.start);
+    c.save(); pvBg(c, D); PV_DRAW[s.type](c, s, lt); c.restore();
+    let cap = capOverride;
+    if (cap === undefined) { const cur = s.sents.find(x => lt >= x.at && lt < x.at + x.dur); cap = cur ? cur.text : ''; }
+    pvCaption(c, cap);
+}
+
+// ── 播放器 ──
+function pvVoice() {
+    const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    return vs.find(v => /zh[-_]TW/i.test(v.lang)) || vs.find(v => /zh[-_]HK/i.test(v.lang)) || vs.find(v => /^zh/i.test(v.lang)) || null;
+}
+function openPersonalityVideo() {
+    if (!chartData) return;
+    let ov = document.getElementById('pvOverlay');
+    if (!ov) {
+        ov = document.createElement('div'); ov.id = 'pvOverlay';
+        ov.innerHTML = `<div class="pv-box">
+            <canvas id="pvCanvas" width="${PV.W}" height="${PV.H}"></canvas>
+            <div class="pv-bar"><div id="pvProg"></div></div>
+            <div class="pv-ctrl">
+                <button onclick="pvJump(-1)">⏮</button><button id="pvPlayBtn" onclick="pvToggle()">▶︎ 播放</button>
+                <button onclick="pvJump(1)">⏭</button><button id="pvVoiceBtn" onclick="pvToggleVoice()">🔊 旁白開</button>
+            </div>
+            <div class="pv-ctrl">
+                <button id="pvRecBtn" onclick="pvRecord()">⏺ 錄成影片</button><button onclick="pvPoster()">🖼 分享圖卡</button>
+                <button onclick="pvShareLink()">🔗 分享連結</button><button onclick="pvSrt()">📝 字幕</button><button onclick="pvClose()">✕</button>
+            </div>
+            <div id="pvMsg" class="pv-msg"></div></div>`;
+        document.body.appendChild(ov);
+    }
+    ov.style.display = 'flex';
+    const D = pvBuild();
+    PV.st = { D, t: 0, playing: false, voice: !!window.speechSynthesis, raf: 0, last: 0, spoken: -1, waiting: false, recording: false };
+    document.getElementById('pvVoiceBtn').textContent = PV.st.voice ? '🔊 旁白開' : '🔇 無旁白';
+    pvMsg(window.speechSynthesis ? '' : '此瀏覽器不支援語音旁白，播放時只顯示字幕。');
+    const draw = () => pvRenderAt(document.getElementById('pvCanvas').getContext('2d'), D, D.S[0].dur * 0.8, '按「▶︎ 播放」開始，或直接分享');
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(draw); draw();
+}
+function pvMsg(t) { const el = document.getElementById('pvMsg'); if (el) el.textContent = t || ''; }
+const pvSents = D => D.S.flatMap(s => s.sents);
+function pvRender() {
+    const S = PV.st; pvRenderAt(document.getElementById('pvCanvas').getContext('2d'), S.D, S.t);
+    const pr = document.getElementById('pvProg'); if (pr) pr.style.width = (S.t / S.D.total * 100) + '%';
+}
+function pvLoop(now) {
+    const S = PV.st; if (!S || !S.playing) return;
+    const dt = S.last ? (now - S.last) / 1000 : 0; S.last = now;
+    const ss = pvSents(S.D);
+    if (S.voice) {
+        const idx = ss.findIndex(x => S.t >= x.start && S.t < x.start + x.dur);
+        if (idx >= 0 && idx !== S.spoken) {
+            S.spoken = idx; S.waiting = true; S.wall = now;
+            const u = new SpeechSynthesisUtterance(ss[idx].text); u.lang = 'zh-TW'; const v = pvVoice(); if (v) u.voice = v;
+            u.onend = u.onerror = () => { if (S.spoken === idx) { S.waiting = false; S.t = Math.max(S.t, ss[idx].start + ss[idx].dur); } };
+            speechSynthesis.speak(u);
+        }
+        const cur = ss[S.spoken];
+        if (S.waiting && cur && S.t + dt >= cur.start + cur.dur - 0.05 && (now - S.wall) / 1000 < cur.dur * 3) S.t = cur.start + cur.dur - 0.05;
+        else S.t += dt;
+    } else S.t += dt;
+    if (S.t >= S.D.total) { S.t = S.D.total - 0.01; pvRender(); pvStop(true); return; }
+    pvRender(); S.raf = requestAnimationFrame(pvLoop);
+}
+function pvToggle() {
+    const S = PV.st; if (!S || S.recording) return;
+    if (S.playing) { pvStop(); return; }
+    if (S.t >= S.D.total - 0.05) S.t = 0;
+    S.playing = true; S.last = 0; S.spoken = -1;
+    if (window.speechSynthesis) { speechSynthesis.cancel(); if (S.voice) { try { const u0 = new SpeechSynthesisUtterance(''); u0.lang = 'zh-TW'; speechSynthesis.speak(u0); } catch (e) {} } }
+    document.getElementById('pvPlayBtn').textContent = '⏸ 暫停';
+    S.raf = requestAnimationFrame(pvLoop);
+}
+function pvStop(ended) {
+    const S = PV.st; if (!S) return;
+    S.playing = false; cancelAnimationFrame(S.raf); if (window.speechSynthesis) speechSynthesis.cancel();
+    const b = document.getElementById('pvPlayBtn'); if (b) b.textContent = ended ? '↺ 重播' : '▶︎ 播放';
+}
+function pvJump(dir) {
+    const S = PV.st; if (!S || S.recording) return;
+    let i = S.D.S.findIndex(s => S.t < s.start + s.dur); if (i < 0) i = S.D.S.length - 1;
+    i = Math.max(0, Math.min(S.D.S.length - 1, i + dir));
+    S.t = S.D.S[i].start + 0.01; S.spoken = -1; if (window.speechSynthesis) speechSynthesis.cancel(); pvRender();
+}
+function pvToggleVoice() {
+    const S = PV.st; if (!S || !window.speechSynthesis) return;
+    S.voice = !S.voice; if (!S.voice) speechSynthesis.cancel(); S.spoken = -1;
+    document.getElementById('pvVoiceBtn').textContent = S.voice ? '🔊 旁白開' : '🔇 旁白關';
+}
+function pvClose() {
+    pvStop(); const S = PV.st;
+    if (S && S.recorder && S.recorder.state !== 'inactive') S.recorder.stop();
+    const ov = document.getElementById('pvOverlay'); if (ov) ov.style.display = 'none';
+}
+
+// ── 分享／下載 ──
+function pvFile(ext) { const n = PV.st && PV.st.D.name; return `${n || '命盤'}_人格分析.${ext}`; }
+async function pvSave(blob, filename, title) {
+    try {
+        const file = new File([blob], filename, { type: blob.type });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title }); return 'shared'; }
+    } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000); return 'downloaded';
+}
+function pvDrawPoster(c, D) {
+    const T = pvTheme(), A = D.A;
+    pvBg(c, D);
+    pvText(c, '人格全方位分析', PV.W / 2, 220, 72, T.text, 900);
+    c.font = `700 44px ${PV_FONT}`;
+    pvWrap(c, A.headline, PV.W - 200).forEach((l, i) => pvText(c, l, PV.W / 2, 310 + i * 60, 44, T.red, 700));
+    pvRadar(c, PV.W / 2, 790, 230, A.dims, 1, A.topDims);
+    const col = (x, title, items, cc) => {
+        pvText(c, title, x, 1200, 46, cc, 900, 'left');
+        items.slice(0, 3).forEach((it, i) => {
+            c.font = `500 34px ${PV_SANS}`;
+            pvWrap(c, '・' + it.t, 410).slice(0, 2).forEach((l, j) => pvText(c, l, x, 1270 + i * 110 + j * 44, 34, T.text, 500, 'left', PV_SANS));
+        });
+    };
+    col(110, '✦ 優勢', A.good, T.green); col(570, '⚠ 盲點', A.flaw, T.red);
+    let y = 1630;
+    if (A.pattern) { pvText(c, `格局：${A.pattern.key}（${A.pattern.name}）`, 110, y, 38, T.gold, 700, 'left'); y += 66; }
+    if (A.fixP) { pvText(c, `執著點：${A.fixP}──${PS_FIX[A.fixP]}`, 110, y, 34, T.sub, 500, 'left', PV_SANS); y += 60; }
+    if (A.laiyin) pvText(c, `來因宮：${A.laiyin.name}`, 110, y, 34, T.sub, 500, 'left', PV_SANS);
+}
+function pvPoster() {
+    const S = PV.st; if (!S) return;
+    const cv = document.createElement('canvas'); cv.width = PV.W; cv.height = PV.H;
+    pvDrawPoster(cv.getContext('2d'), S.D); pvMsg('正在產生圖卡…');
+    cv.toBlob(async b => { const r = await pvSave(b, pvFile('png'), '人格分析圖卡'); pvMsg(r === 'shared' ? '✅ 已分享圖卡' : r === 'downloaded' ? '✅ 圖卡已下載' : ''); }, 'image/png');
+}
+function pvSrtText(D) {
+    const ts = s => { const ms = Math.round(s * 1000); return `${String(Math.floor(ms / 3600000)).padStart(2, '0')}:${String(Math.floor(ms / 60000) % 60).padStart(2, '0')}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')},${String(ms % 1000).padStart(3, '0')}`; };
+    return pvSents(D).map((x, i) => `${i + 1}\n${ts(x.start)} --> ${ts(x.start + x.dur)}\n${x.text}\n`).join('\n');
+}
+async function pvSrt() {
+    const S = PV.st; if (!S) return;
+    const r = await pvSave(new Blob(['﻿' + pvSrtText(S.D)], { type: 'text/plain' }), pvFile('srt'), '人格分析字幕');
+    pvMsg(r === 'shared' ? '✅ 已分享字幕' : r === 'downloaded' ? '✅ 字幕已下載' : '');
+}
+function pvRecMime() {
+    if (!window.MediaRecorder) return null;
+    return ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+        .find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || null;
+}
+function pvRecord() {
+    const S = PV.st; if (!S) return;
+    if (S.recording) { S.recorder && S.recorder.stop(); return; }
+    const cv = document.getElementById('pvCanvas'), mime = pvRecMime();
+    if (!mime || !cv.captureStream) { pvMsg('此瀏覽器不支援錄影，請改用「分享圖卡」或「分享連結」。'); return; }
+    pvStop();
+    const stream = cv.captureStream(30), rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 }), chunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = async () => {
+        S.recording = false; cancelAnimationFrame(S.raf); document.getElementById('pvRecBtn').textContent = '⏺ 錄成影片';
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunks, { type: mime.split(';')[0] });
+        if (!blob.size) { pvMsg('錄影失敗，請再試一次。'); return; }
+        const r = await pvSave(blob, pvFile(mime.includes('mp4') ? 'mp4' : 'webm'), '人格分析動畫');
+        pvMsg(r === 'shared' ? '✅ 已分享影片' : r === 'downloaded' ? '✅ 影片已下載（字幕已燒入）' : '');
+    };
+    S.recording = true; S.recorder = rec; S.t = 0; S.last = 0;
+    document.getElementById('pvRecBtn').textContent = '⏹ 停止錄影';
+    pvMsg(`錄影中…約 ${Math.ceil(S.D.total)} 秒，請保持此畫面`);
+    rec.start(500);
+    const step = now => {
+        if (!S.recording) return;
+        const dt = S.last ? (now - S.last) / 1000 : 0; S.last = now; S.t += dt;
+        if (S.t >= S.D.total + 0.5) { if (rec.state !== 'inactive') rec.stop(); return; }
+        pvRender(); S.raf = requestAnimationFrame(step);
+    };
+    S.raf = requestAnimationFrame(step);
+}
+// 分享連結：對方點開自動排盤並顯示播放鍵
+async function pvShareLink() {
+    const v = id => document.getElementById(id).value;
+    const q = new URLSearchParams({ play: 'ps', y: v('solarYear'), m: v('solarMonth'), d: v('solarDay'), h: v('birthHour'), g: v('gender'), fy: v('flowYear') });
+    const n = (document.getElementById('personName').value || '').trim(); if (n) q.set('n', n);
+    const url = location.origin + location.pathname + '?' + q.toString();
+    const title = `${n ? n + ' 的' : ''}紫微人格分析動畫`;
+    if (navigator.share) { try { await navigator.share({ title, text: `${title}（點開後按播放，有旁白）`, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    try { await navigator.clipboard.writeText(url); pvMsg('✅ 連結已複製，可貼到 LINE 分享（連結含出生資料）'); }
+    catch (e) { prompt('複製以下連結分享：', url); }
+}
+function pvFromUrl(q) {
+    q = q || new URLSearchParams(location.search);
+    if (q.get('play') !== 'ps') return false;
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val !== null && val !== '') el.value = val; };
+    set('solarYear', q.get('y')); set('solarMonth', q.get('m'));
+    document.getElementById('solarMonth').dispatchEvent(new Event('change'));
+    set('solarDay', q.get('d')); set('birthHour', q.get('h')); set('gender', q.get('g')); set('flowYear', q.get('fy')); set('personName', q.get('n'));
+    runChart();
+    const n = (q.get('n') || '').replace(/[<>&"]/g, '');
+    const gate = document.createElement('div'); gate.className = 'pv-gate';
+    gate.innerHTML = `<div class="pv-gate-box"><div class="pv-gate-sub">紫微斗數</div><div class="pv-gate-title">人格分析</div>
+        <div class="pv-gate-info">${n}</div><button class="pv-gate-btn">▶ 點此播放（有旁白）</button><div class="pv-gate-skip">或關閉直接查看命盤</div></div>`;
+    document.body.appendChild(gate);
+    gate.querySelector('.pv-gate-btn').onclick = () => { gate.remove(); openPersonalityVideo(); pvToggle(); };
+    gate.querySelector('.pv-gate-skip').onclick = () => gate.remove();
+    return true;
 }
 
 function renderReport() {
@@ -6898,6 +7375,7 @@ function toggleExpertReport() {
 // ================================================================
 initDateSelects();
 runChart();
+try { pvFromUrl(); } catch (e) { console.warn('pvFromUrl', e); }
 
 // ================================================================
 //  PWA Service Worker 註冊（需要 HTTPS 才能生效）
